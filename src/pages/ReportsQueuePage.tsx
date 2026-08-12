@@ -1,0 +1,146 @@
+import { useEffect, useState } from 'react';
+import {
+  Alert,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  List,
+  ListItemButton,
+  ListItemText,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import { reportRepository } from '../api/adminRepository';
+import type { ReportView } from '../api/types';
+
+const SEVERITY_COLOR: Record<string, 'default' | 'warning' | 'error'> = {
+  LOW: 'default',
+  MEDIUM: 'default',
+  HIGH: 'warning',
+  SAFEGUARDING: 'error',
+};
+
+export function ReportsQueuePage() {
+  const [queue, setQueue] = useState<ReportView[]>([]);
+  const [selected, setSelected] = useState<ReportView | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [reason, setReason] = useState('');
+  const [acting, setActing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  function load() {
+    setLoading(true);
+    reportRepository.queue().then((result) => {
+      if (result.ok) setQueue(result.value);
+      setLoading(false);
+    });
+  }
+
+  useEffect(load, []);
+
+  async function handleAction(action: string) {
+    if (!selected || !reason) return;
+    setActing(true);
+    const result = await reportRepository.act(selected.id, action, reason);
+    setActing(false);
+    if (result.ok) {
+      setSelected(null);
+      setReason('');
+      load();
+    } else {
+      setErrorMessage(result.message);
+    }
+  }
+
+  return (
+    <Stack spacing={2}>
+      <Typography variant="h5" sx={{ fontWeight: 600 }}>
+        Reports queue
+      </Typography>
+      <Typography variant="caption" color="text.secondary">
+        Safeguarding reports are surfaced first and cannot be bulk-actioned.
+      </Typography>
+
+      {errorMessage && <Alert severity="error" onClose={() => setErrorMessage(null)}>{errorMessage}</Alert>}
+
+      {loading ? (
+        <CircularProgress />
+      ) : queue.length === 0 ? (
+        <Typography color="text.secondary">No open reports.</Typography>
+      ) : (
+        <List dense>
+          {queue.map((r) => (
+            <ListItemButton key={r.id} onClick={() => setSelected(r)} divider>
+              <ListItemText
+                primary={`${r.type.replace(/_/g, ' ')} - team ${r.reportedTeamId}`}
+                secondary={`Reported by ${r.reporterTeamId} · ${new Date(r.createdAt).toLocaleString()}`}
+              />
+              <Chip size="small" label={r.severity} color={SEVERITY_COLOR[r.severity]} sx={{ mr: 1 }} />
+              {r.assignedAdminId && <Chip size="small" label="Assigned" variant="outlined" />}
+            </ListItemButton>
+          ))}
+        </List>
+      )}
+
+      <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
+        {selected && (
+          <>
+            <DialogTitle>
+              {selected.type.replace(/_/g, ' ')} report
+              <Chip size="small" label={selected.severity} color={SEVERITY_COLOR[selected.severity]} sx={{ ml: 1 }} />
+            </DialogTitle>
+            <DialogContent>
+              <Stack spacing={2} sx={{ mt: 1 }}>
+                <Typography variant="body2">Reported team: {selected.reportedTeamId}</Typography>
+                <Typography variant="body2">Reporting team: {selected.reporterTeamId}</Typography>
+                {selected.relatedFixtureId && (
+                  <Typography variant="body2">Related fixture: {selected.relatedFixtureId}</Typography>
+                )}
+                {selected.internalNotes.length > 0 && (
+                  <Stack spacing={0.5}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Internal notes
+                    </Typography>
+                    {selected.internalNotes.map((n, i) => (
+                      <Typography key={i} variant="caption">
+                        {new Date(n.createdAt).toLocaleString()}: {n.note}
+                      </Typography>
+                    ))}
+                  </Stack>
+                )}
+                <TextField
+                  label="Note (required for every action)"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  multiline
+                  minRows={2}
+                  fullWidth
+                />
+              </Stack>
+            </DialogContent>
+            <DialogActions sx={{ flexWrap: 'wrap' }}>
+              <Button onClick={() => setSelected(null)}>Close</Button>
+              <Button disabled={acting || !reason} onClick={() => handleAction('dismiss')}>
+                Dismiss
+              </Button>
+              <Button disabled={acting || !reason} onClick={() => handleAction('warn')}>
+                Warn
+              </Button>
+              <Button color="warning" disabled={acting || !reason} onClick={() => handleAction('suspend')}>
+                Suspend
+              </Button>
+              <Button color="error" variant="contained" disabled={acting || !reason} onClick={() => handleAction('escalate')}>
+                Escalate
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+    </Stack>
+  );
+}
