@@ -1,108 +1,177 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  List,
-  ListItemButton,
-  ListItemText,
   Snackbar,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
+import { DataGrid, GridActionsCellItem, type GridColDef } from '@mui/x-data-grid';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
+import ForwardToInboxIcon from '@mui/icons-material/ForwardToInbox';
+import LockResetIcon from '@mui/icons-material/LockReset';
+import BlockIcon from '@mui/icons-material/Block';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { adminUserRepository } from '../api/adminRepository';
 import type { AdminUserView } from '../api/types';
 
 export function UsersPage() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<AdminUserView[]>([]);
+  const [rows, setRows] = useState<AdminUserView[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<AdminUserView | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [searching, setSearching] = useState(false);
 
-  async function search() {
-    if (!query) return;
-    setSearching(true);
-    const result = await adminUserRepository.search(query);
-    setSearching(false);
-    if (result.ok) setResults(result.value);
+  function load() {
+    setLoading(true);
+    adminUserRepository.search('').then((result) => {
+      setLoading(false);
+      if (result.ok) setRows(result.value);
+      else setErrorMessage(result.message);
+    });
+  }
+
+  useEffect(load, []);
+
+  function updateRow(user: AdminUserView) {
+    setRows((prev) => prev.map((u) => (u.id === user.id ? user : u)));
+    if (selected?.id === user.id) setSelected(user);
+  }
+
+  async function toggleSuspend(user: AdminUserView) {
+    if (!user.suspended && !window.confirm(`Suspend ${user.displayName}? They will be signed out immediately.`)) return;
+    const result = user.suspended
+      ? await adminUserRepository.unsuspend(user.id)
+      : await adminUserRepository.suspend(user.id);
+    if (result.ok) updateRow(result.value);
     else setErrorMessage(result.message);
   }
 
-  async function toggleSuspend() {
-    if (!selected) return;
-    const result = selected.suspended
-      ? await adminUserRepository.unsuspend(selected.id)
-      : await adminUserRepository.suspend(selected.id);
-    if (result.ok) {
-      setSelected(result.value);
-      setResults((prev) => prev.map((u) => (u.id === result.value.id ? result.value : u)));
-    } else {
-      setErrorMessage(result.message);
-    }
-  }
-
-  async function forceReset() {
-    if (!selected) return;
-    const result = await adminUserRepository.forcePasswordReset(selected.id);
+  async function forceReset(user: AdminUserView) {
+    const result = await adminUserRepository.forcePasswordReset(user.id);
     setToast(result.ok ? 'Password reset issued (logged server-side - no email provider configured).' : result.message);
   }
 
-  async function resendVerification() {
-    if (!selected) return;
-    const result = await adminUserRepository.resendVerification(selected.id);
+  async function resendVerification(user: AdminUserView) {
+    const result = await adminUserRepository.resendVerification(user.id);
     setToast(result.ok ? 'Verification email resent.' : result.message);
   }
 
-  async function verifyEmail() {
-    if (!selected) return;
-    const result = await adminUserRepository.verifyEmail(selected.id);
+  async function verifyEmail(user: AdminUserView) {
+    const result = await adminUserRepository.verifyEmail(user.id);
     if (result.ok) {
-      setSelected(result.value);
-      setResults((prev) => prev.map((u) => (u.id === result.value.id ? result.value : u)));
+      updateRow(result.value);
       setToast('Email marked as verified.');
     } else {
       setToast(result.message);
     }
   }
 
+  const columns: GridColDef<AdminUserView>[] = [
+    { field: 'displayName', headerName: 'Name', flex: 1, minWidth: 160 },
+    { field: 'email', headerName: 'Email', flex: 1.2, minWidth: 200 },
+    {
+      field: 'emailVerified',
+      headerName: 'Verified',
+      width: 110,
+      renderCell: ({ value }) =>
+        value ? <Chip size="small" label="Verified" color="success" variant="outlined" /> : <Chip size="small" label="Unverified" />,
+    },
+    {
+      field: 'suspended',
+      headerName: 'Status',
+      width: 110,
+      renderCell: ({ value }) =>
+        value ? <Chip size="small" label="Suspended" color="error" /> : <Chip size="small" label="Active" color="success" variant="outlined" />,
+    },
+    {
+      field: 'memberships',
+      headerName: 'Memberships',
+      width: 110,
+      valueGetter: (_, row) => row.memberships.length,
+    },
+    {
+      field: 'actions',
+      type: 'actions',
+      headerName: 'Actions',
+      width: 200,
+      getActions: ({ row }) => {
+        const actions = [
+          <GridActionsCellItem
+            key="view"
+            icon={<VisibilityIcon fontSize="small" />}
+            label="View details"
+            onClick={() => setSelected(row)}
+          />,
+        ];
+        if (!row.emailVerified) {
+          actions.push(
+            <GridActionsCellItem
+              key="verify"
+              icon={<MarkEmailReadIcon fontSize="small" />}
+              label="Verify email now"
+              onClick={() => verifyEmail(row)}
+            />,
+            <GridActionsCellItem
+              key="resend"
+              icon={<ForwardToInboxIcon fontSize="small" />}
+              label="Resend verification"
+              onClick={() => resendVerification(row)}
+            />,
+          );
+        }
+        actions.push(
+          <GridActionsCellItem
+            key="reset"
+            icon={<LockResetIcon fontSize="small" />}
+            label="Force password reset"
+            onClick={() => forceReset(row)}
+          />,
+          <GridActionsCellItem
+            key="suspend"
+            icon={row.suspended ? <CheckCircleIcon fontSize="small" color="success" /> : <BlockIcon fontSize="small" color="error" />}
+            label={row.suspended ? 'Unsuspend' : 'Suspend'}
+            onClick={() => toggleSuspend(row)}
+          />,
+        );
+        return actions;
+      },
+    },
+  ];
+
   return (
     <Stack spacing={2}>
-      <Typography variant="h5" sx={{ fontWeight: 600 }}>
-        Users
-      </Typography>
-
-      {errorMessage && <Alert severity="error" onClose={() => setErrorMessage(null)}>{errorMessage}</Alert>}
-
-      <Stack direction="row" spacing={1}>
-        <TextField
-          label="Search email or name"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && search()}
-          size="small"
-          fullWidth
-        />
-        <Button variant="contained" disabled={searching} onClick={search}>
-          Search
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          Users
+        </Typography>
+        <Button size="small" startIcon={<RefreshIcon />} onClick={load} disabled={loading}>
+          Refresh
         </Button>
       </Stack>
 
-      <List dense>
-        {results.map((u) => (
-          <ListItemButton key={u.id} onClick={() => setSelected(u)} divider>
-            <ListItemText primary={u.displayName} secondary={u.email} />
-            {u.suspended && <Chip size="small" color="error" label="Suspended" sx={{ mr: 1 }} />}
-            {!u.emailVerified && <Chip size="small" label="Unverified" variant="outlined" />}
-          </ListItemButton>
-        ))}
-      </List>
+      {errorMessage && <Alert severity="error" onClose={() => setErrorMessage(null)}>{errorMessage}</Alert>}
+
+      <DataGrid
+        rows={rows}
+        columns={columns}
+        loading={loading}
+        autoHeight
+        density="compact"
+        disableRowSelectionOnClick
+        showToolbar
+        pageSizeOptions={[25, 50, 100]}
+        initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+        slots={{ loadingOverlay: () => <CircularProgress sx={{ m: 4 }} /> }}
+      />
 
       <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="xs" fullWidth>
         {selected && (
@@ -129,17 +198,7 @@ export function UsersPage() {
                 </Stack>
               </Stack>
             </DialogContent>
-            <DialogActions sx={{ flexWrap: 'wrap' }}>
-              {!selected.emailVerified && (
-                <Button onClick={verifyEmail} color="success">
-                  Verify email now
-                </Button>
-              )}
-              <Button onClick={resendVerification}>Resend verification</Button>
-              <Button onClick={forceReset}>Force password reset</Button>
-              <Button color={selected.suspended ? 'success' : 'error'} onClick={toggleSuspend}>
-                {selected.suspended ? 'Unsuspend' : 'Suspend'}
-              </Button>
+            <DialogActions>
               <Button onClick={() => setSelected(null)}>Close</Button>
             </DialogActions>
           </>

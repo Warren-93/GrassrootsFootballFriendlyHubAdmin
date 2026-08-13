@@ -1,152 +1,175 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  List,
-  ListItemButton,
-  ListItemText,
+  Snackbar,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
+import { DataGrid, GridActionsCellItem, type GridColDef } from '@mui/x-data-grid';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import VerifiedIcon from '@mui/icons-material/Verified';
+import BlockIcon from '@mui/icons-material/Block';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CallMergeIcon from '@mui/icons-material/CallMerge';
 import { adminTeamRepository } from '../api/adminRepository';
 import type { AdminTeamView } from '../api/types';
 
 export function ClubsTeamsPage() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<AdminTeamView[]>([]);
-  const [selected, setSelected] = useState<AdminTeamView | null>(null);
-  const [reason, setReason] = useState('');
-  const [mergeOpen, setMergeOpen] = useState(false);
+  const [rows, setRows] = useState<AdminTeamView[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [mergeTarget, setMergeTarget] = useState<AdminTeamView | null>(null);
   const [duplicateId, setDuplicateId] = useState('');
+  const [merging, setMerging] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [searching, setSearching] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
-  async function search() {
-    if (!query) return;
-    setSearching(true);
-    const result = await adminTeamRepository.search(query);
-    setSearching(false);
-    if (result.ok) setResults(result.value);
+  function load() {
+    setLoading(true);
+    adminTeamRepository.search('').then((result) => {
+      setLoading(false);
+      if (result.ok) setRows(result.value);
+      else setErrorMessage(result.message);
+    });
+  }
+
+  useEffect(load, []);
+
+  function updateRow(team: AdminTeamView) {
+    setRows((prev) => prev.map((t) => (t.id === team.id ? team : t)));
+  }
+
+  async function toggleSuspend(team: AdminTeamView) {
+    if (!team.suspended && !window.confirm(`Suspend ${team.name}? Their open friendly requests will be cancelled.`)) return;
+    const result = team.suspended
+      ? await adminTeamRepository.unsuspend(team.id)
+      : await adminTeamRepository.suspend(team.id);
+    if (result.ok) updateRow(result.value);
     else setErrorMessage(result.message);
   }
 
-  async function toggleSuspend() {
-    if (!selected) return;
-    const result = selected.suspended
-      ? await adminTeamRepository.unsuspend(selected.id, reason || undefined)
-      : await adminTeamRepository.suspend(selected.id, reason || undefined);
+  async function verifyTeam(team: AdminTeamView) {
+    const result = await adminTeamRepository.verify(team.id);
     if (result.ok) {
-      setSelected(result.value);
-      setResults((prev) => prev.map((t) => (t.id === result.value.id ? result.value : t)));
-      setReason('');
-    } else {
-      setErrorMessage(result.message);
-    }
-  }
-
-  async function verifyTeam() {
-    if (!selected) return;
-    const result = await adminTeamRepository.verify(selected.id);
-    if (result.ok) {
-      setSelected(result.value);
-      setResults((prev) => prev.map((t) => (t.id === result.value.id ? result.value : t)));
+      updateRow(result.value);
+      setToast('Team verified.');
     } else {
       setErrorMessage(result.message);
     }
   }
 
   async function merge() {
-    if (!selected || !duplicateId) return;
-    const result = await adminTeamRepository.merge(selected.id, duplicateId);
+    if (!mergeTarget || !duplicateId) return;
+    setMerging(true);
+    const result = await adminTeamRepository.merge(mergeTarget.id, duplicateId);
+    setMerging(false);
     if (result.ok) {
-      setMergeOpen(false);
+      setMergeTarget(null);
       setDuplicateId('');
-      search();
+      setToast('Teams merged.');
+      load();
     } else {
       setErrorMessage(result.message);
     }
   }
 
+  const columns: GridColDef<AdminTeamView>[] = [
+    { field: 'name', headerName: 'Team', flex: 1, minWidth: 160 },
+    { field: 'clubName', headerName: 'Club', flex: 1, minWidth: 160 },
+    { field: 'ageGroup', headerName: 'Age group', width: 100 },
+    { field: 'gender', headerName: 'Gender', width: 90 },
+    { field: 'format', headerName: 'Format', width: 130, valueFormatter: (value: string) => value?.replace(/_/g, ' ') },
+    { field: 'abilityLevel', headerName: 'Ability', width: 130 },
+    {
+      field: 'verification',
+      headerName: 'Verification',
+      width: 130,
+      renderCell: ({ value }) => (
+        <Chip size="small" label={value.replace(/_/g, ' ')} color={value === 'VERIFIED' ? 'success' : 'default'} variant="outlined" />
+      ),
+    },
+    {
+      field: 'suspended',
+      headerName: 'Status',
+      width: 110,
+      renderCell: ({ value }) =>
+        value ? <Chip size="small" label="Suspended" color="error" /> : <Chip size="small" label="Active" color="success" variant="outlined" />,
+    },
+    {
+      field: 'actions',
+      type: 'actions',
+      headerName: 'Actions',
+      width: 150,
+      getActions: ({ row }) => {
+        const actions = [];
+        if (row.verification !== 'VERIFIED') {
+          actions.push(
+            <GridActionsCellItem
+              key="verify"
+              icon={<VerifiedIcon fontSize="small" />}
+              label="Verify team now"
+              onClick={() => verifyTeam(row)}
+            />,
+          );
+        }
+        actions.push(
+          <GridActionsCellItem
+            key="merge"
+            icon={<CallMergeIcon fontSize="small" />}
+            label="Merge duplicate into this…"
+            onClick={() => setMergeTarget(row)}
+          />,
+          <GridActionsCellItem
+            key="suspend"
+            icon={row.suspended ? <CheckCircleIcon fontSize="small" color="success" /> : <BlockIcon fontSize="small" color="error" />}
+            label={row.suspended ? 'Unsuspend' : 'Suspend'}
+            onClick={() => toggleSuspend(row)}
+          />,
+        );
+        return actions;
+      },
+    },
+  ];
+
   return (
     <Stack spacing={2}>
-      <Typography variant="h5" sx={{ fontWeight: 600 }}>
-        Clubs and teams
-      </Typography>
-
-      {errorMessage && <Alert severity="error" onClose={() => setErrorMessage(null)}>{errorMessage}</Alert>}
-
-      <Stack direction="row" spacing={1}>
-        <TextField
-          label="Search team name"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && search()}
-          size="small"
-          fullWidth
-        />
-        <Button variant="contained" disabled={searching} onClick={search}>
-          Search
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          Clubs and teams
+        </Typography>
+        <Button size="small" startIcon={<RefreshIcon />} onClick={load} disabled={loading}>
+          Refresh
         </Button>
       </Stack>
 
-      <List dense>
-        {results.map((t) => (
-          <ListItemButton key={t.id} onClick={() => setSelected(t)} divider>
-            <ListItemText primary={t.name} secondary={`${t.clubName} · ${t.ageGroup} · ${t.format}`} />
-            {t.suspended && <Chip size="small" color="error" label="Suspended" sx={{ mr: 1 }} />}
-            <Chip size="small" label={t.verification} variant="outlined" />
-          </ListItemButton>
-        ))}
-      </List>
+      {errorMessage && <Alert severity="error" onClose={() => setErrorMessage(null)}>{errorMessage}</Alert>}
 
-      <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="xs" fullWidth>
-        {selected && (
-          <>
-            <DialogTitle>{selected.name}</DialogTitle>
-            <DialogContent>
-              <Stack spacing={2} sx={{ mt: 1 }}>
-                <Typography variant="body2">Club: {selected.clubName}</Typography>
-                <Typography variant="body2">
-                  {selected.ageGroup} · {selected.gender} · {selected.format} · {selected.abilityLevel}
-                </Typography>
-                <Typography variant="body2">Verification: {selected.verification}</Typography>
-                <TextField
-                  label="Reason (optional)"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  size="small"
-                  fullWidth
-                />
-              </Stack>
-            </DialogContent>
-            <DialogActions sx={{ flexWrap: 'wrap' }}>
-              {selected.verification !== 'VERIFIED' && (
-                <Button onClick={verifyTeam} color="success">
-                  Verify team now
-                </Button>
-              )}
-              <Button onClick={() => setMergeOpen(true)}>Merge duplicate into this…</Button>
-              <Button color={selected.suspended ? 'success' : 'error'} onClick={toggleSuspend}>
-                {selected.suspended ? 'Unsuspend' : 'Suspend'}
-              </Button>
-              <Button onClick={() => setSelected(null)}>Close</Button>
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
+      <DataGrid
+        rows={rows}
+        columns={columns}
+        loading={loading}
+        autoHeight
+        density="compact"
+        disableRowSelectionOnClick
+        showToolbar
+        pageSizeOptions={[25, 50, 100]}
+        initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+        slots={{ loadingOverlay: () => <CircularProgress sx={{ m: 4 }} /> }}
+      />
 
-      <Dialog open={mergeOpen} onClose={() => setMergeOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog open={!!mergeTarget} onClose={() => setMergeTarget(null)} maxWidth="xs" fullWidth>
         <DialogTitle>Merge duplicate team</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Typography variant="body2">
-              Primary: {selected?.name} ({selected?.id})
+              Primary: {mergeTarget?.name} ({mergeTarget?.id})
             </Typography>
             <TextField
               label="Duplicate team ID"
@@ -158,12 +181,14 @@ export function ClubsTeamsPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setMergeOpen(false)}>Cancel</Button>
-          <Button variant="contained" disabled={!duplicateId} onClick={merge}>
+          <Button onClick={() => setMergeTarget(null)}>Cancel</Button>
+          <Button variant="contained" disabled={!duplicateId || merging} onClick={merge}>
             Merge
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar open={!!toast} autoHideDuration={4000} onClose={() => setToast(null)} message={toast} />
     </Stack>
   );
 }
