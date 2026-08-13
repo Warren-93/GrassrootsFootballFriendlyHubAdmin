@@ -81,6 +81,7 @@ export const adminUserRepository = {
   forcePasswordReset: (userId: string) => apiClient.post<void>(`/api/v1/admin/users/${userId}/force-password-reset`),
   resendVerification: (userId: string) => apiClient.post<void>(`/api/v1/admin/users/${userId}/resend-verification`),
   verifyEmail: (userId: string) => apiClient.post<AdminUserView>(`/api/v1/admin/users/${userId}/verify-email`),
+  delete: (userId: string) => apiClient.delete<void>(`/api/v1/admin/users/${userId}`),
 };
 
 export const matchingConfigRepository = {

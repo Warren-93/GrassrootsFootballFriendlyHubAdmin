@@ -20,6 +20,7 @@ import ForwardToInboxIcon from '@mui/icons-material/ForwardToInbox';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { adminUserRepository } from '../api/adminRepository';
 import type { AdminUserView } from '../api/types';
 
@@ -75,6 +76,23 @@ export function UsersPage() {
     }
   }
 
+  async function deleteUser(user: AdminUserView) {
+    if (
+      !window.confirm(
+        `Permanently delete ${user.displayName} (${user.email})? This removes their account and club/team memberships. This cannot be undone.`,
+      )
+    )
+      return;
+    const result = await adminUserRepository.delete(user.id);
+    if (result.ok) {
+      setRows((prev) => prev.filter((u) => u.id !== user.id));
+      if (selected?.id === user.id) setSelected(null);
+      setToast('User deleted.');
+    } else {
+      setErrorMessage(result.message);
+    }
+  }
+
   const columns: GridColDef<AdminUserView>[] = [
     { field: 'displayName', headerName: 'Name', flex: 1, minWidth: 160 },
     { field: 'email', headerName: 'Email', flex: 1.2, minWidth: 200 },
@@ -102,7 +120,7 @@ export function UsersPage() {
       field: 'actions',
       type: 'actions',
       headerName: 'Actions',
-      width: 200,
+      width: 240,
       getActions: ({ row }) => {
         const actions = [
           <GridActionsCellItem
@@ -140,6 +158,12 @@ export function UsersPage() {
             icon={row.suspended ? <CheckCircleIcon fontSize="small" color="success" /> : <BlockIcon fontSize="small" color="error" />}
             label={row.suspended ? 'Unsuspend' : 'Suspend'}
             onClick={() => toggleSuspend(row)}
+          />,
+          <GridActionsCellItem
+            key="delete"
+            icon={<DeleteForeverIcon fontSize="small" color="error" />}
+            label="Delete account"
+            onClick={() => deleteUser(row)}
           />,
         );
         return actions;
