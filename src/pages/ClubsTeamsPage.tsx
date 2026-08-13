@@ -50,6 +50,17 @@ export function ClubsTeamsPage() {
     }
   }
 
+  async function verifyTeam() {
+    if (!selected) return;
+    const result = await adminTeamRepository.verify(selected.id);
+    if (result.ok) {
+      setSelected(result.value);
+      setResults((prev) => prev.map((t) => (t.id === result.value.id ? result.value : t)));
+    } else {
+      setErrorMessage(result.message);
+    }
+  }
+
   async function merge() {
     if (!selected || !duplicateId) return;
     const result = await adminTeamRepository.merge(selected.id, duplicateId);
@@ -114,7 +125,12 @@ export function ClubsTeamsPage() {
                 />
               </Stack>
             </DialogContent>
-            <DialogActions>
+            <DialogActions sx={{ flexWrap: 'wrap' }}>
+              {selected.verification !== 'VERIFIED' && (
+                <Button onClick={verifyTeam} color="success">
+                  Verify team now
+                </Button>
+              )}
               <Button onClick={() => setMergeOpen(true)}>Merge duplicate into this…</Button>
               <Button color={selected.suspended ? 'success' : 'error'} onClick={toggleSuspend}>
                 {selected.suspended ? 'Unsuspend' : 'Suspend'}

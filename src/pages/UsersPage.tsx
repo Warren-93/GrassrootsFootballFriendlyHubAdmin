@@ -60,6 +60,18 @@ export function UsersPage() {
     setToast(result.ok ? 'Verification email resent.' : result.message);
   }
 
+  async function verifyEmail() {
+    if (!selected) return;
+    const result = await adminUserRepository.verifyEmail(selected.id);
+    if (result.ok) {
+      setSelected(result.value);
+      setResults((prev) => prev.map((u) => (u.id === result.value.id ? result.value : u)));
+      setToast('Email marked as verified.');
+    } else {
+      setToast(result.message);
+    }
+  }
+
   return (
     <Stack spacing={2}>
       <Typography variant="h5" sx={{ fontWeight: 600 }}>
@@ -118,6 +130,11 @@ export function UsersPage() {
               </Stack>
             </DialogContent>
             <DialogActions sx={{ flexWrap: 'wrap' }}>
+              {!selected.emailVerified && (
+                <Button onClick={verifyEmail} color="success">
+                  Verify email now
+                </Button>
+              )}
               <Button onClick={resendVerification}>Resend verification</Button>
               <Button onClick={forceReset}>Force password reset</Button>
               <Button color={selected.suspended ? 'success' : 'error'} onClick={toggleSuspend}>

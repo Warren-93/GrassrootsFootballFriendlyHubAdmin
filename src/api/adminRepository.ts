@@ -68,6 +68,7 @@ export const adminTeamRepository = {
     apiClient.post<AdminTeamView>(`/api/v1/admin/teams/${teamId}/unsuspend`, reason ? { reason } : undefined),
   merge: (primaryTeamId: string, duplicateTeamId: string) =>
     apiClient.post<void>('/api/v1/admin/teams/merge', { primaryTeamId, duplicateTeamId }),
+  verify: (teamId: string) => apiClient.post<AdminTeamView>(`/api/v1/admin/teams/${teamId}/verify`),
 };
 
 export const adminUserRepository = {
@@ -79,6 +80,7 @@ export const adminUserRepository = {
     apiClient.post<AdminUserView>(`/api/v1/admin/users/${userId}/unsuspend`, reason ? { reason } : undefined),
   forcePasswordReset: (userId: string) => apiClient.post<void>(`/api/v1/admin/users/${userId}/force-password-reset`),
   resendVerification: (userId: string) => apiClient.post<void>(`/api/v1/admin/users/${userId}/resend-verification`),
+  verifyEmail: (userId: string) => apiClient.post<AdminUserView>(`/api/v1/admin/users/${userId}/verify-email`),
 };
 
 export const matchingConfigRepository = {
