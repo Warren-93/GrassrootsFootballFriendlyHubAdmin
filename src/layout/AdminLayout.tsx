@@ -32,9 +32,10 @@ export function AdminLayout() {
   return (
     <Box sx={{ display: 'flex' }}>
       <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1, bgcolor: 'primary.main' }}>
-        <Toolbar variant="dense">
+        <Toolbar variant="dense" sx={{ gap: 1 }}>
+          <Box component="img" src="/favicon.svg" alt="" sx={{ width: 22, height: 22 }} />
           <Typography variant="subtitle1" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            GFFH Admin
+            PitchMate Admin
           </Typography>
           <Typography variant="body2" sx={{ mr: 2 }}>
             {email}
