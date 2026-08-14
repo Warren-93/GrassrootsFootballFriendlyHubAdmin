@@ -57,6 +57,19 @@ export function ReportsQueuePage() {
     }
   }
 
+  async function handleAssignToMe() {
+    if (!selected) return;
+    setActing(true);
+    const result = await reportRepository.assign(selected.id);
+    setActing(false);
+    if (result.ok) {
+      setSelected(result.value);
+      load();
+    } else {
+      setErrorMessage(result.message);
+    }
+  }
+
   return (
     <Stack spacing={2}>
       <Typography variant="h5" sx={{ fontWeight: 600 }}>
@@ -125,6 +138,13 @@ export function ReportsQueuePage() {
             </DialogContent>
             <DialogActions sx={{ flexWrap: 'wrap' }}>
               <Button onClick={() => setSelected(null)}>Close</Button>
+              <Button
+                variant="outlined"
+                disabled={acting || !!selected.assignedAdminId}
+                onClick={handleAssignToMe}
+              >
+                {selected.assignedAdminId ? 'Assigned' : 'Assign to me'}
+              </Button>
               <Button disabled={acting || !reason} onClick={() => handleAction('dismiss')}>
                 Dismiss
               </Button>
