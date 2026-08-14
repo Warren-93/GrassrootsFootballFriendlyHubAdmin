@@ -10,10 +10,12 @@ import {
   DialogTitle,
   Snackbar,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import { DataGrid, GridActionsCellItem, type GridColDef } from '@mui/x-data-grid';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import ForwardToInboxIcon from '@mui/icons-material/ForwardToInbox';
@@ -27,20 +29,29 @@ import type { AdminUserView } from '../api/types';
 export function UsersPage() {
   const [rows, setRows] = useState<AdminUserView[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<AdminUserView | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  function load() {
+  function load(searchQuery: string) {
     setLoading(true);
-    adminUserRepository.search('').then((result) => {
+    adminUserRepository.search(searchQuery).then((result) => {
       setLoading(false);
       if (result.ok) setRows(result.value);
       else setErrorMessage(result.message);
     });
   }
 
-  useEffect(load, []);
+  // Debounced so every keystroke doesn't fire its own request against the
+  // real search endpoint - this used to load everything once and filter
+  // client-side in the DataGrid's own quick filter, which stopped scaling
+  // once the user list grew past what's comfortable to ship to the browser.
+  useEffect(() => {
+    const timer = setTimeout(() => load(query), query ? 300 : 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   function updateRow(user: AdminUserView) {
     setRows((prev) => prev.map((u) => (u.id === user.id ? user : u)));
@@ -177,9 +188,18 @@ export function UsersPage() {
         <Typography variant="h5" sx={{ fontWeight: 600 }}>
           Users
         </Typography>
-        <Button size="small" startIcon={<RefreshIcon />} onClick={load} disabled={loading}>
-          Refresh
-        </Button>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <TextField
+            size="small"
+            placeholder="Search name or email…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            slotProps={{ input: { startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} /> } }}
+          />
+          <Button size="small" startIcon={<RefreshIcon />} onClick={() => load(query)} disabled={loading}>
+            Refresh
+          </Button>
+        </Stack>
       </Stack>
 
       {errorMessage && <Alert severity="error" onClose={() => setErrorMessage(null)}>{errorMessage}</Alert>}

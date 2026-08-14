@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { DataGrid, GridActionsCellItem, type GridColDef } from '@mui/x-data-grid';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SearchIcon from '@mui/icons-material/Search';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -25,22 +26,30 @@ import type { AdminTeamView } from '../api/types';
 export function ClubsTeamsPage() {
   const [rows, setRows] = useState<AdminTeamView[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
   const [mergeTarget, setMergeTarget] = useState<AdminTeamView | null>(null);
   const [duplicateId, setDuplicateId] = useState('');
   const [merging, setMerging] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  function load() {
+  function load(searchQuery: string) {
     setLoading(true);
-    adminTeamRepository.search('').then((result) => {
+    adminTeamRepository.search(searchQuery).then((result) => {
       setLoading(false);
       if (result.ok) setRows(result.value);
       else setErrorMessage(result.message);
     });
   }
 
-  useEffect(load, []);
+  // Debounced so typing doesn't fire a request per keystroke - this used to
+  // load everything once and filter client-side in the DataGrid's own quick
+  // filter, even though the backend already supports a real search query.
+  useEffect(() => {
+    const timer = setTimeout(() => load(query), query ? 300 : 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   function updateRow(team: AdminTeamView) {
     setRows((prev) => prev.map((t) => (t.id === team.id ? team : t)));
@@ -74,7 +83,7 @@ export function ClubsTeamsPage() {
       setMergeTarget(null);
       setDuplicateId('');
       setToast('Teams merged.');
-      load();
+      load(query);
     } else {
       setErrorMessage(result.message);
     }
@@ -144,9 +153,18 @@ export function ClubsTeamsPage() {
         <Typography variant="h5" sx={{ fontWeight: 600 }}>
           Clubs and teams
         </Typography>
-        <Button size="small" startIcon={<RefreshIcon />} onClick={load} disabled={loading}>
-          Refresh
-        </Button>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <TextField
+            size="small"
+            placeholder="Search team or club name…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            slotProps={{ input: { startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} /> } }}
+          />
+          <Button size="small" startIcon={<RefreshIcon />} onClick={() => load(query)} disabled={loading}>
+            Refresh
+          </Button>
+        </Stack>
       </Stack>
 
       {errorMessage && <Alert severity="error" onClose={() => setErrorMessage(null)}>{errorMessage}</Alert>}
