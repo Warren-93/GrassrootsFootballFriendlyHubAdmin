@@ -107,6 +107,12 @@ export interface WeightsView {
   ability: number;
 }
 
+export interface CurrentWeightsView extends WeightsView {
+  ageBandTolerance: number;
+  distanceFreeMiles: number;
+  distanceFloor: number;
+}
+
 export interface MatchingConfigVersionView {
   id: string;
   age: number;

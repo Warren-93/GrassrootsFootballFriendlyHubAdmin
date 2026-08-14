@@ -5,6 +5,7 @@ import type {
   AdminUserView,
   AuditLogEntry,
   BootstrapResponse,
+  CurrentWeightsView,
   FixtureInspectorView,
   LoginStep1Response,
   MatchingConfigVersionView,
@@ -14,7 +15,6 @@ import type {
   SessionResponse,
   VerificationRequestView,
   WeightsInput,
-  WeightsView,
 } from './types';
 
 export const authRepository = {
@@ -85,7 +85,7 @@ export const adminUserRepository = {
 };
 
 export const matchingConfigRepository = {
-  current: () => apiClient.get<WeightsView>('/api/v1/admin/matching-config/current'),
+  current: () => apiClient.get<CurrentWeightsView>('/api/v1/admin/matching-config/current'),
   history: () => apiClient.get<MatchingConfigVersionView[]>('/api/v1/admin/matching-config/versions'),
   preview: (teamId: string, weights: WeightsInput) =>
     apiClient.post<SearchResponse>('/api/v1/admin/matching-config/preview', { teamId, weights }),

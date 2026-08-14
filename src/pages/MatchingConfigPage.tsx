@@ -25,6 +25,7 @@ const FACTORS: { key: keyof WeightsInput; label: string }[] = [
 export function MatchingConfigPage() {
   const [weights, setWeights] = useState<WeightsInput>({
     age: 25, availability: 25, format: 15, distance: 15, homeAway: 10, ability: 10,
+    ageBandTolerance: 0, distanceFreeMiles: 5, distanceFloor: 0.15,
   });
   const [versionNote, setVersionNote] = useState('');
   const [previewTeamId, setPreviewTeamId] = useState('');
@@ -90,6 +91,52 @@ export function MatchingConfigPage() {
                 />
               </Box>
             ))}
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Card variant="outlined">
+        <CardContent>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+            Advanced tuning
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+            These don't count toward the 100% total above &mdash; they shape how the distance and age factors score, not how much they're worth.
+          </Typography>
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="body2">Age band tolerance: {weights.ageBandTolerance ?? 0} band(s) apart</Typography>
+              <Slider
+                value={weights.ageBandTolerance ?? 0}
+                min={0}
+                max={5}
+                step={1}
+                marks
+                onChange={(_, v) => setFactor('ageBandTolerance', v as number)}
+              />
+            </Box>
+            <Box>
+              <Typography variant="body2">Distance free miles: {weights.distanceFreeMiles ?? 5} mi before any penalty applies</Typography>
+              <Slider
+                value={weights.distanceFreeMiles ?? 5}
+                min={0}
+                max={30}
+                step={0.5}
+                onChange={(_, v) => setFactor('distanceFreeMiles', v as number)}
+              />
+            </Box>
+            <Box>
+              <Typography variant="body2">
+                Distance floor: {Math.round((weights.distanceFloor ?? 0.15) * 100)}% of the distance score retained at maximum range
+              </Typography>
+              <Slider
+                value={weights.distanceFloor ?? 0.15}
+                min={0}
+                max={1}
+                step={0.05}
+                onChange={(_, v) => setFactor('distanceFloor', v as number)}
+              />
+            </Box>
           </Stack>
         </CardContent>
       </Card>
