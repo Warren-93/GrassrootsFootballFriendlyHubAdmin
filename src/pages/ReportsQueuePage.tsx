@@ -15,8 +15,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { reportRepository } from '../api/adminRepository';
-import type { ReportView } from '../api/types';
+import { adminConversationRepository, reportRepository } from '../api/adminRepository';
+import type { ConversationMessageView, ReportView } from '../api/types';
 
 const SEVERITY_COLOR: Record<string, 'default' | 'warning' | 'error'> = {
   LOW: 'default',
@@ -32,6 +32,8 @@ export function ReportsQueuePage() {
   const [reason, setReason] = useState('');
   const [acting, setActing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ConversationMessageView[] | null>(null);
+  const [loadingMessages, setLoadingMessages] = useState(false);
 
   function load() {
     setLoading(true);
@@ -55,6 +57,15 @@ export function ReportsQueuePage() {
     } else {
       setErrorMessage(result.message);
     }
+  }
+
+  async function loadMessages() {
+    if (!selected) return;
+    setLoadingMessages(true);
+    const result = await adminConversationRepository.between(selected.reporterTeamId, selected.reportedTeamId);
+    setLoadingMessages(false);
+    if (result.ok) setMessages(result.value);
+    else setErrorMessage(result.message);
   }
 
   async function handleAssignToMe() {
@@ -88,7 +99,14 @@ export function ReportsQueuePage() {
       ) : (
         <List dense>
           {queue.map((r) => (
-            <ListItemButton key={r.id} onClick={() => setSelected(r)} divider>
+            <ListItemButton
+              key={r.id}
+              onClick={() => {
+                setSelected(r);
+                setMessages(null);
+              }}
+              divider
+            >
               <ListItemText
                 primary={`${r.type.replace(/_/g, ' ')} - team ${r.reportedTeamId}`}
                 secondary={`Reported by ${r.reporterTeamId} · ${new Date(r.createdAt).toLocaleString()}`}
@@ -126,6 +144,30 @@ export function ReportsQueuePage() {
                     ))}
                   </Stack>
                 )}
+                <Stack spacing={0.5}>
+                  <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Messages between these teams
+                    </Typography>
+                    {messages === null && (
+                      <Button size="small" disabled={loadingMessages} onClick={loadMessages}>
+                        {loadingMessages ? 'Loading…' : 'Load messages'}
+                      </Button>
+                    )}
+                  </Stack>
+                  {messages !== null &&
+                    (messages.length === 0 ? (
+                      <Typography variant="caption" color="text.secondary">
+                        No conversation exists between these two teams.
+                      </Typography>
+                    ) : (
+                      messages.map((m) => (
+                        <Typography key={m.id} variant="caption" sx={{ display: 'block' }}>
+                          {new Date(m.createdAt).toLocaleString()} · team {m.senderTeamId.slice(0, 8)}: {m.body}
+                        </Typography>
+                      ))
+                    ))}
+                </Stack>
                 <TextField
                   label="Note (required for every action)"
                   value={reason}

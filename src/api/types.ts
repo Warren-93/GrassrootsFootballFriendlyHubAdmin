@@ -145,6 +145,15 @@ export interface SearchResponse {
   weights: WeightsView;
 }
 
+export interface ConversationMessageView {
+  id: string;
+  conversationId: string;
+  senderTeamId: string;
+  senderUserId: string;
+  body: string;
+  createdAt: string;
+}
+
 export interface AuditLogEntry {
   id: string;
   actorAdminId: string;

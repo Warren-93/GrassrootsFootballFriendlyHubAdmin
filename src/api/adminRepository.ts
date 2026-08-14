@@ -5,6 +5,7 @@ import type {
   AdminUserView,
   AuditLogEntry,
   BootstrapResponse,
+  ConversationMessageView,
   CurrentWeightsView,
   FixtureInspectorView,
   LoginStep1Response,
@@ -100,4 +101,10 @@ export const auditLogRepository = {
 
 export const fixtureInspectorRepository = {
   get: (id: string) => apiClient.get<FixtureInspectorView>(`/api/v1/admin/fixtures/${id}`),
+};
+
+export const adminConversationRepository = {
+  /** The transcript between two teams, if any conversation exists - empty array otherwise. Every call is audit-logged server-side. */
+  between: (teamAId: string, teamBId: string) =>
+    apiClient.get<ConversationMessageView[]>('/api/v1/admin/conversations/between', { teamAId, teamBId }),
 };
