@@ -33,9 +33,9 @@ export function AdminLayout() {
     <Box sx={{ display: 'flex' }}>
       <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1, bgcolor: 'primary.main' }}>
         <Toolbar variant="dense" sx={{ gap: 1 }}>
-          <Box component="img" src="/favicon.svg" alt="" sx={{ width: 22, height: 22 }} />
-          <Typography variant="subtitle1" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            PitchMate Admin
+          <Box component="img" src="/logo-horizontal-reversed-transparent.png" alt="Kickabout" sx={{ height: 26 }} />
+          <Typography variant="subtitle1" sx={{ flexGrow: 1, fontWeight: 600, opacity: 0.85 }}>
+            Admin
           </Typography>
           <Typography variant="body2" sx={{ mr: 2 }}>
             {email}

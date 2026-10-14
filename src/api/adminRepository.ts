@@ -22,8 +22,13 @@ export const authRepository = {
   bootstrap: (email: string, password: string) =>
     apiClient.post<BootstrapResponse>('/api/v1/admin/auth/bootstrap', { email, password }, false),
 
-  login: (email: string, password: string) =>
-    apiClient.post<LoginStep1Response>('/api/v1/admin/auth/login', { email, password }, false),
+  login: async (email: string, password: string) => {
+    const result = await apiClient.post<LoginStep1Response>('/api/v1/admin/auth/login', { email, password }, false);
+    if (result.ok && result.value.accessToken && result.value.email) {
+      tokenStore.set(result.value.accessToken, result.value.email);
+    }
+    return result;
+  },
 
   verify: async (pendingToken: string, code: string) => {
     const result = await apiClient.post<SessionResponse>(

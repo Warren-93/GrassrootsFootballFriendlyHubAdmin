@@ -21,7 +21,11 @@ export function SignInPage() {
     setErrorMessage(null);
     const result = await authRepository.login(email, password);
     setSubmitting(false);
-    if (result.ok) {
+    if (result.ok && result.value.accessToken && result.value.email) {
+      // Authenticator codes are off: the password alone signs in.
+      setSignedIn(result.value.email);
+      navigate('/');
+    } else if (result.ok) {
       setPendingToken(result.value.pendingToken);
       setStep('code');
     } else {
@@ -46,11 +50,14 @@ export function SignInPage() {
     <Container maxWidth="xs" sx={{ py: 8 }}>
       <Paper sx={{ p: 3 }}>
         <Stack spacing={2}>
+          <Box component="img" src="/logo-horizontal-transparent.png" alt="Kickabout" sx={{ height: 40, alignSelf: 'flex-start' }} />
           <Box>
             <Typography variant="h6">Administrator sign-in</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {step === 'password' ? 'Step 1 of 2 - password' : 'Step 2 of 2 - authenticator code'}
-            </Typography>
+            {step === 'code' && (
+              <Typography variant="body2" color="text.secondary">
+                Enter the code from your authenticator app
+              </Typography>
+            )}
           </Box>
 
           {step === 'password' ? (
