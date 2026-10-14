@@ -1,13 +1,23 @@
 // Wire types, field-for-field matches to gffh-api's Admin*Dtos.java files.
 
+/** The TOTP fields are null when the API has authenticator codes turned off. */
 export interface BootstrapResponse {
   adminId: string;
-  totpSecret: string;
-  provisioningUri: string;
+  totpSecret: string | null;
+  provisioningUri: string | null;
 }
 
+/**
+ * With authenticator codes off (the API's default), the session fields are
+ * filled in and the admin is signed in straight away; otherwise only
+ * pendingToken is set and sign-in continues with a code.
+ */
 export interface LoginStep1Response {
   pendingToken: string;
+  accessToken?: string | null;
+  tokenType?: string | null;
+  expiresIn?: number | null;
+  email?: string | null;
 }
 
 export interface SessionResponse {

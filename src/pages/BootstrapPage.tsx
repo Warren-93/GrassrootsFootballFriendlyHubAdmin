@@ -27,7 +27,25 @@ export function BootstrapPage() {
     else setErrorMessage(response.message);
   }
 
-  if (result) {
+  if (result && !result.provisioningUri) {
+    return (
+      <Container maxWidth="xs" sx={{ py: 6 }}>
+        <Paper sx={{ p: 3 }}>
+          <Stack spacing={2}>
+            <Typography variant="h6">Admin account created</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Sign in with the email and password you just chose.
+            </Typography>
+            <Button variant="contained" fullWidth onClick={() => navigate('/sign-in')}>
+              Continue to sign in
+            </Button>
+          </Stack>
+        </Paper>
+      </Container>
+    );
+  }
+
+  if (result?.provisioningUri) {
     return (
       <Container maxWidth="xs" sx={{ py: 6 }}>
         <Paper sx={{ p: 3 }}>

@@ -3,16 +3,17 @@ import { createTheme } from '@mui/material/styles';
 // Dense, keyboard-first, internal tool aesthetic - deliberately plainer than
 // the consumer apps' theme (see the spec's section 10 intro: "dense,
 // keyboard-first and built for sustained queue work rather than for
-// occasional mobile use"). Still PitchMate's navy/green brand, just without
-// the consumer app's lighter touches.
+// occasional mobile use"). Same Kickabout navy/pitch-green brand as the web
+// and mobile apps (see gffh-web's theme.ts \`brand\`), just without the
+// consumer app's lighter touches.
 export const theme = createTheme({
   palette: {
     mode: 'light',
     primary: { main: '#14213D' },
-    secondary: { main: '#2E9E52' },
+    secondary: { main: '#229A46' },
     error: { main: '#C62828' },
     warning: { main: '#FFA000' },
-    background: { default: '#F4F5F7' },
+    background: { default: '#EEF1F5' },
   },
   shape: { borderRadius: 6 },
   typography: {
