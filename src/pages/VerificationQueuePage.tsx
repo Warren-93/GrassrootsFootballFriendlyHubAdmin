@@ -81,7 +81,14 @@ export function VerificationQueuePage() {
       ) : (
         <List dense>
           {queue.map((r) => (
-            <ListItemButton key={r.id} onClick={() => setSelected(r)} divider>
+            <ListItemButton
+              key={r.id}
+              onClick={() => {
+                setSelected(r);
+                setRejectReason('');
+              }}
+              divider
+            >
               <ListItemText
                 primary={r.teamName ?? `Team ${r.teamId}`}
                 secondary={

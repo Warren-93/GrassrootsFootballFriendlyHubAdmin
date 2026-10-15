@@ -116,6 +116,7 @@ export function ReportsQueuePage() {
               onClick={() => {
                 setSelected(r);
                 setMessages(null);
+                setReason('');
               }}
               divider
             >

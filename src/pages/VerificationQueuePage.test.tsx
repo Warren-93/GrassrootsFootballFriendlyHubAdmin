@@ -67,6 +67,22 @@ describe('VerificationQueuePage', () => {
     expect(screen.queryByText(`Team ID ${TEAM_ID}`)).not.toBeInTheDocument();
   });
 
+  it('does not carry a rejection reason over to the next request', async () => {
+    queueReturns([
+      request({ teamName: 'Riverside Rovers U12' }),
+      request({ id: 'v2', teamId: 'other-team', teamName: 'Hilltop Hawks U12' }),
+    ]);
+
+    render(<VerificationQueuePage />);
+    await userEvent.click(await screen.findByText('Riverside Rovers U12'));
+    await userEvent.type(screen.getByLabelText(/Rejection reason/), 'Evidence is unreadable');
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await userEvent.click(await screen.findByText('Hilltop Hawks U12'));
+
+    expect(await screen.findByText('Verification request - Hilltop Hawks U12')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Rejection reason/)).toHaveValue('');
+  });
+
   it('shows the error rather than an empty queue when the load fails', async () => {
     vi.mocked(verificationRepository.queue).mockResolvedValue({
       ok: false,

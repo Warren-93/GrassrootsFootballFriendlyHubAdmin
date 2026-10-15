@@ -19,7 +19,7 @@ function report(overrides: Partial<ReportView> = {}): ReportView {
     reporterTeamId: REPORTER_ID,
     reportedTeamId: REPORTED_ID,
     relatedFixtureId: null,
-    type: 'NO_SHOW',
+    type: 'OTHER',
     severity: 'MEDIUM',
     details: null,
     status: 'OPEN',
@@ -44,7 +44,7 @@ describe('ReportsQueuePage', () => {
 
     render(<ReportsQueuePage />);
 
-    expect(await screen.findByText('NO SHOW - Riverside Rovers U12')).toBeInTheDocument();
+    expect(await screen.findByText('OTHER - Riverside Rovers U12')).toBeInTheDocument();
     expect(screen.getByText(/^Reported by Hilltop Hawks U12 · /)).toBeInTheDocument();
     expect(
       screen.getByText(`Reported team ID ${REPORTED_ID} · reporting team ID ${REPORTER_ID}`),
@@ -68,7 +68,7 @@ describe('ReportsQueuePage', () => {
     });
 
     render(<ReportsQueuePage />);
-    await userEvent.click(await screen.findByText('NO SHOW - Riverside Rovers U12'));
+    await userEvent.click(await screen.findByText('OTHER - Riverside Rovers U12'));
 
     expect(screen.getByText('Reported team: Riverside Rovers U12')).toBeInTheDocument();
     expect(screen.getByText('Reporting team: Hilltop Hawks U12')).toBeInTheDocument();
@@ -87,10 +87,29 @@ describe('ReportsQueuePage', () => {
     });
 
     render(<ReportsQueuePage />);
-    await userEvent.click(await screen.findByText('NO SHOW - Riverside Rovers U12'));
+    await userEvent.click(await screen.findByText('OTHER - Riverside Rovers U12'));
 
     expect(screen.getByText('Details from the reporting team')).toBeInTheDocument();
     expect(screen.getByText('They did not turn up and stopped answering messages.')).toBeInTheDocument();
+  });
+
+  it('does not carry a note over to the next report', async () => {
+    vi.mocked(reportRepository.queue).mockResolvedValue({
+      ok: true,
+      value: [
+        report(named),
+        report({ id: 'r2', type: 'ABUSIVE_BEHAVIOUR', reportedTeamName: 'Valley United U12', reporterTeamName: 'Hilltop Hawks U12' }),
+      ],
+    });
+
+    render(<ReportsQueuePage />);
+    await userEvent.click(await screen.findByText('OTHER - Riverside Rovers U12'));
+    await userEvent.type(screen.getByLabelText(/Note/), 'Spoke to both managers');
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await userEvent.click(await screen.findByText('ABUSIVE BEHAVIOUR - Valley United U12'));
+
+    expect(await screen.findByText('Reported team: Valley United U12')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Note/)).toHaveValue('');
   });
 
   it('falls back to the team IDs when the API sends no names', async () => {
@@ -98,7 +117,7 @@ describe('ReportsQueuePage', () => {
 
     render(<ReportsQueuePage />);
 
-    expect(await screen.findByText(`NO SHOW - team ${REPORTED_ID}`)).toBeInTheDocument();
+    expect(await screen.findByText(`OTHER - team ${REPORTED_ID}`)).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`^Reported by ${REPORTER_ID} · `))).toBeInTheDocument();
     expect(screen.queryByText(/Reported team ID/)).not.toBeInTheDocument();
   });
