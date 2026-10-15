@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { Alert, Button, Card, CardContent, Divider, Stack, TextField, Typography } from '@mui/material';
 import { adminConversationRepository, fixtureInspectorRepository } from '../api/adminRepository';
-import type { ConversationMessageView, FixtureInspectorView } from '../api/types';
+import type { ConversationMessageView, FixtureInspectorView, VenueSummary } from '../api/types';
+
+/** "Name, address, postcode", leaving the postcode off when the address already contains it. */
+function venueLine(venue: VenueSummary): string {
+  const squash = (s: string) => s.replace(/\s+/g, '').toUpperCase();
+  const postcode = venue.postcode?.trim();
+  const showPostcode = postcode && !squash(venue.address ?? '').includes(squash(postcode));
+  return [venue.name, venue.address, showPostcode ? postcode : null].filter(Boolean).join(', ');
+}
 
 export function FixtureInspectorPage() {
   const [fixtureId, setFixtureId] = useState('');
@@ -72,9 +80,7 @@ export function FixtureInspectorPage() {
             <Typography variant="body2">Referee: {view.fixture.refereeArrangement}</Typography>
             <Typography variant="body2">
               Venue:{' '}
-              {view.fixture.venue
-                ? [view.fixture.venue.name, view.fixture.venue.address, view.fixture.venue.postcode].filter(Boolean).join(', ')
-                : 'not set'}
+              {view.fixture.venue ? venueLine(view.fixture.venue) : 'not set'}
             </Typography>
 
             <Divider sx={{ my: 2 }} />

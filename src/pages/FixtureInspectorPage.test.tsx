@@ -68,6 +68,29 @@ describe('FixtureInspectorPage', () => {
     expect(await screen.findByText('Venue: Riverside Park, 1 River Lane, Leeds, LS1 4AB')).toBeInTheDocument();
   });
 
+  it("doesn't repeat a postcode the address already has", async () => {
+    vi.mocked(fixtureInspectorRepository.get).mockResolvedValue({
+      ok: true,
+      value: inspected({
+        venue: {
+          id: 'v1',
+          name: 'Riverside Park',
+          address: '1 River Lane, Leeds LS1 4AB',
+          postcode: 'LS1 4AB',
+          pitchSurface: null,
+          accessNotes: null,
+          parkingNotes: null,
+          latitude: null,
+          longitude: null,
+        },
+      }),
+    });
+
+    await inspect();
+
+    expect(await screen.findByText('Venue: Riverside Park, 1 River Lane, Leeds LS1 4AB')).toBeInTheDocument();
+  });
+
   it('says when no venue is set', async () => {
     vi.mocked(fixtureInspectorRepository.get).mockResolvedValue({ ok: true, value: inspected() });
 
