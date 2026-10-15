@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VerificationQueuePage } from './VerificationQueuePage';
@@ -81,6 +81,21 @@ describe('VerificationQueuePage', () => {
 
     expect(await screen.findByText('Verification request - Hilltop Hawks U12')).toBeInTheDocument();
     expect(screen.getByLabelText(/Rejection reason/)).toHaveValue('');
+  });
+
+  it('shows a failed approval inside the dialog, where the admin can see it', async () => {
+    queueReturns([request({ teamName: 'Riverside Rovers U12' })]);
+    vi.mocked(verificationRepository.approve).mockResolvedValue({
+      ok: false,
+      message: 'This request has already been reviewed.',
+      status: 409,
+    });
+
+    render(<VerificationQueuePage />);
+    await userEvent.click(await screen.findByText('Riverside Rovers U12'));
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }));
+
+    expect(await within(screen.getByRole('dialog')).findByText('This request has already been reviewed.')).toBeInTheDocument();
   });
 
   it('shows the error rather than an empty queue when the load fails', async () => {

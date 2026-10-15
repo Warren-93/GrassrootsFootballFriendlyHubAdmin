@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReportsQueuePage } from './ReportsQueuePage';
@@ -110,6 +110,18 @@ describe('ReportsQueuePage', () => {
 
     expect(await screen.findByText('Reported team: Valley United U12')).toBeInTheDocument();
     expect(screen.getByLabelText(/Note/)).toHaveValue('');
+  });
+
+  it('shows a failed action inside the dialog, where the admin can see it', async () => {
+    vi.mocked(reportRepository.queue).mockResolvedValue({ ok: true, value: [report(named)] });
+    vi.mocked(reportRepository.act).mockResolvedValue({ ok: false, message: 'Unknown action: dismiss', status: 400 });
+
+    render(<ReportsQueuePage />);
+    await userEvent.click(await screen.findByText('OTHER - Riverside Rovers U12'));
+    await userEvent.type(screen.getByLabelText(/Note/), 'Duplicate of an earlier report');
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+
+    expect(await within(screen.getByRole('dialog')).findByText('Unknown action: dismiss')).toBeInTheDocument();
   });
 
   it('falls back to the team IDs when the API sends no names', async () => {

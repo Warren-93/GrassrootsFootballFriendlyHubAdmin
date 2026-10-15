@@ -26,6 +26,7 @@ export function VerificationQueuePage() {
   const [loading, setLoading] = useState(true);
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
@@ -42,7 +43,9 @@ export function VerificationQueuePage() {
   useEffect(load, []);
 
   async function approve(id: string) {
+    setApproving(true);
     const result = await verificationRepository.approve(id);
+    setApproving(false);
     if (result.ok) {
       setSelected(null);
       load();
@@ -86,6 +89,7 @@ export function VerificationQueuePage() {
               onClick={() => {
                 setSelected(r);
                 setRejectReason('');
+                setErrorMessage(null);
               }}
               divider
             >
@@ -138,14 +142,16 @@ export function VerificationQueuePage() {
                   minRows={2}
                   fullWidth
                 />
+                {/* The page's own alert is hidden behind this dialog. */}
+                {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
               </Stack>
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setSelected(null)}>Close</Button>
-              <Button color="error" disabled={rejecting || !rejectReason} onClick={reject}>
+              <Button color="error" disabled={rejecting || approving || !rejectReason} onClick={reject}>
                 Reject
               </Button>
-              <Button variant="contained" onClick={() => approve(selected.id)}>
+              <Button variant="contained" disabled={rejecting || approving} onClick={() => approve(selected.id)}>
                 Approve
               </Button>
             </DialogActions>

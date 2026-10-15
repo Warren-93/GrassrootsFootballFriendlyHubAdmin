@@ -117,6 +117,7 @@ export function ReportsQueuePage() {
                 setSelected(r);
                 setMessages(null);
                 setReason('');
+                setErrorMessage(null);
               }}
               divider
             >
@@ -208,6 +209,8 @@ export function ReportsQueuePage() {
                   minRows={2}
                   fullWidth
                 />
+                {/* The page's own alert is hidden behind this dialog. */}
+                {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
               </Stack>
             </DialogContent>
             <DialogActions sx={{ flexWrap: 'wrap' }}>
