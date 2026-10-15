@@ -21,6 +21,7 @@ function report(overrides: Partial<ReportView> = {}): ReportView {
     relatedFixtureId: null,
     type: 'NO_SHOW',
     severity: 'MEDIUM',
+    details: null,
     status: 'OPEN',
     assignedAdminId: null,
     internalNotes: [],
@@ -77,6 +78,19 @@ describe('ReportsQueuePage', () => {
     await userEvent.click(screen.getByRole('button', { name: /load messages/i }));
 
     expect(await screen.findByText(/Riverside Rovers U12: See you Saturday/)).toBeInTheDocument();
+  });
+
+  it('shows the details the reporting team wrote in the dialog', async () => {
+    vi.mocked(reportRepository.queue).mockResolvedValue({
+      ok: true,
+      value: [report({ ...named, details: 'They did not turn up and stopped answering messages.' })],
+    });
+
+    render(<ReportsQueuePage />);
+    await userEvent.click(await screen.findByText('NO SHOW - Riverside Rovers U12'));
+
+    expect(screen.getByText('Details from the reporting team')).toBeInTheDocument();
+    expect(screen.getByText('They did not turn up and stopped answering messages.')).toBeInTheDocument();
   });
 
   it('falls back to the team IDs when the API sends no names', async () => {

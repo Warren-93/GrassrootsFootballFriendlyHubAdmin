@@ -153,6 +153,16 @@ export function ReportsQueuePage() {
                 {selected.relatedFixtureId && (
                   <Typography variant="body2">Related fixture: {selected.relatedFixtureId}</Typography>
                 )}
+                {selected.details && (
+                  <Stack spacing={0.5}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Details from the reporting team
+                    </Typography>
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {selected.details}
+                    </Typography>
+                  </Stack>
+                )}
                 {selected.internalNotes.length > 0 && (
                   <Stack spacing={0.5}>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>

@@ -67,6 +67,8 @@ export interface ReportView {
   relatedFixtureId: string | null;
   type: string;
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'SAFEGUARDING';
+  /** What the reporting team wrote, up to 1000 characters. */
+  details: string | null;
   status: 'OPEN' | 'DISMISSED' | 'WARNED' | 'SUSPENDED' | 'ESCALATED';
   assignedAdminId: string | null;
   internalNotes: InternalNoteView[];
