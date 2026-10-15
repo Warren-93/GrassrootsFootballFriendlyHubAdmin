@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { verificationRepository } from '../api/adminRepository';
 import type { VerificationRequestView } from '../api/types';
+import { IdCaption, TeamNameLine } from '../components/TeamName';
 
 export function VerificationQueuePage() {
   const [queue, setQueue] = useState<VerificationRequestView[]>([]);
@@ -78,8 +79,13 @@ export function VerificationQueuePage() {
           {queue.map((r) => (
             <ListItemButton key={r.id} onClick={() => setSelected(r)} divider>
               <ListItemText
-                primary={`Team ${r.teamId}`}
-                secondary={`Submitted ${new Date(r.submittedAt).toLocaleString()}`}
+                primary={r.teamName ?? `Team ${r.teamId}`}
+                secondary={
+                  <>
+                    {[r.clubName, `Submitted ${new Date(r.submittedAt).toLocaleString()}`].filter(Boolean).join(' · ')}
+                    {r.teamName && <IdCaption>Team ID {r.teamId}</IdCaption>}
+                  </>
+                }
               />
               <Chip size="small" label={r.status.replace(/_/g, ' ')} />
             </ListItemButton>
@@ -90,9 +96,11 @@ export function VerificationQueuePage() {
       <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
         {selected && (
           <>
-            <DialogTitle>Verification request - team {selected.teamId}</DialogTitle>
+            <DialogTitle>Verification request - {selected.teamName ?? `team ${selected.teamId}`}</DialogTitle>
             <DialogContent>
               <Stack spacing={2} sx={{ mt: 1 }}>
+                <TeamNameLine label="Team" id={selected.teamId} name={selected.teamName} />
+                {selected.clubName && <Typography variant="body2">Club: {selected.clubName}</Typography>}
                 <Typography variant="body2">Affiliation number: {selected.affiliationNumber ?? '—'}</Typography>
                 <Typography variant="body2">Contact: {selected.contactDetails}</Typography>
                 <Box>

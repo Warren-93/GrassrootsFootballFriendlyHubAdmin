@@ -38,6 +38,9 @@ export interface OverviewResponse {
 export interface VerificationRequestView {
   id: string;
   teamId: string;
+  /** Absent from APIs older than the admin-names change; show teamId instead. */
+  teamName?: string | null;
+  clubName?: string | null;
   affiliationNumber: string | null;
   contactDetails: string;
   evidenceUrls: string[];
@@ -58,6 +61,9 @@ export interface ReportView {
   id: string;
   reporterTeamId: string;
   reportedTeamId: string;
+  /** Absent from APIs older than the admin-names change; show the team IDs instead. */
+  reporterTeamName?: string | null;
+  reportedTeamName?: string | null;
   relatedFixtureId: string | null;
   type: string;
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'SAFEGUARDING';
