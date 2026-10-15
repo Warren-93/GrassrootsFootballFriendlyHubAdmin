@@ -62,7 +62,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<A
     if (response.status === 204) {
       return ok(undefined as T);
     }
-    return ok((await response.json()) as T);
+    // Some actions (merge teams, force a password reset, resend verification)
+    // answer 200 with no body, which response.json() would reject.
+    const text = await response.text();
+    return ok((text ? JSON.parse(text) : undefined) as T);
   } catch {
     return fail('Network error - check your connection and try again.');
   }
