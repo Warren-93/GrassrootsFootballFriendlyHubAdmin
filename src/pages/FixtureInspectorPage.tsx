@@ -70,6 +70,12 @@ export function FixtureInspectorPage() {
             </Typography>
             <Typography variant="body2">Cost share: {view.fixture.costShare}</Typography>
             <Typography variant="body2">Referee: {view.fixture.refereeArrangement}</Typography>
+            <Typography variant="body2">
+              Venue:{' '}
+              {view.fixture.venue
+                ? [view.fixture.venue.name, view.fixture.venue.address, view.fixture.venue.postcode].filter(Boolean).join(', ')
+                : 'not set'}
+            </Typography>
 
             <Divider sx={{ my: 2 }} />
 

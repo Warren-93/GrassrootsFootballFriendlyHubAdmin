@@ -190,6 +190,19 @@ export interface FixtureTeamView {
   managerName: string | null;
   contactPhone: string | null;
   venueId: string | null;
+  badgeUrl?: string | null;
+}
+
+export interface VenueSummary {
+  id: string;
+  name: string;
+  address: string | null;
+  postcode: string | null;
+  pitchSurface: string | null;
+  accessNotes: string | null;
+  parkingNotes: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface FixtureView {
@@ -204,6 +217,8 @@ export interface FixtureView {
   status: string;
   costShare: string;
   refereeArrangement: string;
+  /** The fixture's venue, else the home team's default. Absent from older APIs. */
+  venue?: VenueSummary | null;
 }
 
 export interface FixtureInspectorView {
