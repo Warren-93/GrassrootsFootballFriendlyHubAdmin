@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button, CircularProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import { auditLogRepository } from '../api/adminRepository';
@@ -19,15 +19,17 @@ export function AuditLogPage() {
   const [targetType, setTargetType] = useState('');
   const [loading, setLoading] = useState(true);
 
-  function load() {
+  // Takes the filter as an argument so the first load runs once, unfiltered,
+  // and typing in the filter box only reloads on Enter or the Filter button.
+  const load = useCallback((filter: string) => {
     setLoading(true);
-    auditLogRepository.list(targetType || undefined, undefined, 200).then((result) => {
+    auditLogRepository.list(filter || undefined, undefined, 200).then((result) => {
       if (result.ok) setEntries(result.value);
       setLoading(false);
     });
-  }
+  }, []);
 
-  useEffect(load, []);
+  useEffect(() => load(''), [load]);
 
   function exportCsv() {
     const blob = new Blob([toCsv(entries)], { type: 'text/csv' });
@@ -53,11 +55,11 @@ export function AuditLogPage() {
           label="Filter by target type (e.g. TEAM, USER, REPORT)"
           value={targetType}
           onChange={(e) => setTargetType(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && load()}
+          onKeyDown={(e) => e.key === 'Enter' && load(targetType)}
           size="small"
           fullWidth
         />
-        <Button variant="outlined" onClick={load}>
+        <Button variant="outlined" onClick={() => load(targetType)}>
           Filter
         </Button>
         <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>

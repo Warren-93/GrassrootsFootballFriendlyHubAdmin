@@ -79,6 +79,6 @@ describe('apiClient', () => {
     await apiClient.get('/api/v1/admin/reports');
 
     const [, init] = vi.mocked(fetch).mock.calls[0];
-    expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer a-valid-token');
+    expect(init?.headers).toMatchObject({ Authorization: 'Bearer a-valid-token' });
   });
 });
