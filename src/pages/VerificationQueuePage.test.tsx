@@ -66,4 +66,16 @@ describe('VerificationQueuePage', () => {
     expect(await screen.findByText(`Team ${TEAM_ID}`)).toBeInTheDocument();
     expect(screen.queryByText(`Team ID ${TEAM_ID}`)).not.toBeInTheDocument();
   });
+
+  it('shows the error rather than an empty queue when the load fails', async () => {
+    vi.mocked(verificationRepository.queue).mockResolvedValue({
+      ok: false,
+      message: 'Network error - check your connection and try again.',
+    });
+
+    render(<VerificationQueuePage />);
+
+    expect(await screen.findByText('Network error - check your connection and try again.')).toBeInTheDocument();
+    expect(screen.queryByText('Nothing pending review.')).not.toBeInTheDocument();
+  });
 });

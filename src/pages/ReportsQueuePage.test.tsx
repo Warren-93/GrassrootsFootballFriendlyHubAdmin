@@ -88,4 +88,16 @@ describe('ReportsQueuePage', () => {
     expect(screen.getByText(new RegExp(`^Reported by ${REPORTER_ID} · `))).toBeInTheDocument();
     expect(screen.queryByText(/Reported team ID/)).not.toBeInTheDocument();
   });
+
+  it('shows the error rather than an empty queue when the load fails', async () => {
+    vi.mocked(reportRepository.queue).mockResolvedValue({
+      ok: false,
+      message: 'Network error - check your connection and try again.',
+    });
+
+    render(<ReportsQueuePage />);
+
+    expect(await screen.findByText('Network error - check your connection and try again.')).toBeInTheDocument();
+    expect(screen.queryByText('No open reports.')).not.toBeInTheDocument();
+  });
 });

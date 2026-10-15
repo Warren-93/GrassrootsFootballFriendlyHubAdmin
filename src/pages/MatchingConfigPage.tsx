@@ -37,6 +37,8 @@ export function MatchingConfigPage() {
   useEffect(() => {
     matchingConfigRepository.current().then((result) => {
       if (result.ok) setWeights((w) => ({ ...w, ...result.value }));
+      // Otherwise the sliders show built-in defaults, not the live weights.
+      else setErrorMessage(result.message);
     });
   }, []);
 

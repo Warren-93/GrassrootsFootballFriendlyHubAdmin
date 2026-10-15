@@ -27,11 +27,14 @@ export function VerificationQueuePage() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   function load() {
     setLoading(true);
     verificationRepository.queue().then((result) => {
       if (result.ok) setQueue(result.value);
+      else setErrorMessage(result.message);
+      setLoadFailed(!result.ok);
       setLoading(false);
     });
   }
@@ -73,7 +76,8 @@ export function VerificationQueuePage() {
       {loading ? (
         <CircularProgress />
       ) : queue.length === 0 ? (
-        <Typography color="text.secondary">Nothing pending review.</Typography>
+        // After a failed load the error above explains the empty list.
+        !loadFailed && <Typography color="text.secondary">Nothing pending review.</Typography>
       ) : (
         <List dense>
           {queue.map((r) => (

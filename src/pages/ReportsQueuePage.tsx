@@ -42,11 +42,14 @@ export function ReportsQueuePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [messages, setMessages] = useState<ConversationMessageView[] | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   function load() {
     setLoading(true);
     reportRepository.queue().then((result) => {
       if (result.ok) setQueue(result.value);
+      else setErrorMessage(result.message);
+      setLoadFailed(!result.ok);
       setLoading(false);
     });
   }
@@ -103,7 +106,8 @@ export function ReportsQueuePage() {
       {loading ? (
         <CircularProgress />
       ) : queue.length === 0 ? (
-        <Typography color="text.secondary">No open reports.</Typography>
+        // After a failed load the error above explains the empty list.
+        !loadFailed && <Typography color="text.secondary">No open reports.</Typography>
       ) : (
         <List dense>
           {queue.map((r) => (

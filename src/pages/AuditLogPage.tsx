@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Button, CircularProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Button, CircularProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import { auditLogRepository } from '../api/adminRepository';
 import type { AuditLogEntry } from '../api/types';
@@ -18,13 +18,16 @@ export function AuditLogPage() {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [targetType, setTargetType] = useState('');
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Takes the filter as an argument so the first load runs once, unfiltered,
   // and typing in the filter box only reloads on Enter or the Filter button.
   const load = useCallback((filter: string) => {
     setLoading(true);
+    setErrorMessage(null);
     auditLogRepository.list(filter || undefined, undefined, 200).then((result) => {
       if (result.ok) setEntries(result.value);
+      else setErrorMessage(result.message);
       setLoading(false);
     });
   }, []);
@@ -66,6 +69,8 @@ export function AuditLogPage() {
           Export CSV
         </Button>
       </Stack>
+
+      {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
 
       {loading ? (
         <CircularProgress />
