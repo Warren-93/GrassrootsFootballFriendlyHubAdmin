@@ -131,7 +131,7 @@ export function VerificationQueuePage() {
                 {selected.status === 'AWAITING_SECOND_REJECTION' && (
                   <Alert severity="warning">
                     Already rejected once (reason: "{selected.firstRejectionReason}"). A different administrator
-                    must confirm to finalize.
+                    must confirm to finalise.
                   </Alert>
                 )}
                 <TextField
