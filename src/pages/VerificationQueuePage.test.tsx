@@ -127,6 +127,15 @@ describe('VerificationQueuePage', () => {
     expect(verificationRepository.reject).toHaveBeenCalledWith('v1', 'Evidence is still unreadable');
   });
 
+  it('leaves the reason out of the notice when the first rejection has none', async () => {
+    queueReturns([request({ teamName: 'Riverside Rovers U12', status: 'AWAITING_SECOND_REJECTION' })]);
+
+    render(<VerificationQueuePage />);
+    await userEvent.click(await screen.findByText('Riverside Rovers U12'));
+
+    expect(screen.getByText(/^Already rejected once, so it can't be approved now\./)).toBeInTheDocument();
+  });
+
   it('offers Approve on a pending request', async () => {
     queueReturns([request({ teamName: 'Riverside Rovers U12' })]);
 
