@@ -1,7 +1,21 @@
 import { useState } from 'react';
 import { Alert, Button, Card, CardContent, Divider, Stack, TextField, Typography } from '@mui/material';
 import { adminConversationRepository, fixtureInspectorRepository } from '../api/adminRepository';
-import type { ConversationMessageView, FixtureInspectorView } from '../api/types';
+import type { ConversationMessageView, FixtureInspectorView, FixtureView, VenueSummary } from '../api/types';
+
+/** "Name, address, postcode", leaving the postcode off when the address already contains it. */
+function venueLine(venue: VenueSummary): string {
+  const squash = (s: string) => s.replace(/\s+/g, '').toUpperCase();
+  const postcode = venue.postcode?.trim();
+  const showPostcode = postcode && !squash(venue.address ?? '').includes(squash(postcode));
+  return [venue.name, venue.address, showPostcode ? postcode : null].filter(Boolean).join(', ');
+}
+
+/** The sending team's name, or "team <start of its ID>" if it isn't one of the fixture's two teams. */
+function senderLabel(fixture: FixtureView, senderTeamId: string): string {
+  const team = [fixture.homeTeam, fixture.awayTeam].find((t) => t.id === senderTeamId);
+  return team?.name || `team ${senderTeamId.slice(0, 8)}`;
+}
 
 export function FixtureInspectorPage() {
   const [fixtureId, setFixtureId] = useState('');
@@ -70,6 +84,10 @@ export function FixtureInspectorPage() {
             </Typography>
             <Typography variant="body2">Cost share: {view.fixture.costShare}</Typography>
             <Typography variant="body2">Referee: {view.fixture.refereeArrangement}</Typography>
+            <Typography variant="body2">
+              Venue:{' '}
+              {view.fixture.venue ? venueLine(view.fixture.venue) : 'not set'}
+            </Typography>
 
             <Divider sx={{ my: 2 }} />
 
@@ -92,7 +110,7 @@ export function FixtureInspectorPage() {
                 ) : (
                   messages.map((m) => (
                     <Typography key={m.id} variant="caption" sx={{ display: 'block' }}>
-                      {new Date(m.createdAt).toLocaleString()} · team {m.senderTeamId.slice(0, 8)}: {m.body}
+                      {new Date(m.createdAt).toLocaleString()} · {senderLabel(view.fixture, m.senderTeamId)}: {m.body}
                     </Typography>
                   ))
                 )}

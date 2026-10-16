@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { adminConversationRepository, reportRepository } from '../api/adminRepository';
 import type { ConversationMessageView, ReportView } from '../api/types';
+import { IdCaption, TeamNameLine } from '../components/TeamName';
 
 const SEVERITY_COLOR: Record<string, 'default' | 'warning' | 'error'> = {
   LOW: 'default',
@@ -24,6 +25,13 @@ const SEVERITY_COLOR: Record<string, 'default' | 'warning' | 'error'> = {
   HIGH: 'warning',
   SAFEGUARDING: 'error',
 };
+
+/** Who sent a message in the conversation between the report's two teams. */
+function senderLabel(report: ReportView, teamId: string): string {
+  if (teamId === report.reporterTeamId && report.reporterTeamName) return report.reporterTeamName;
+  if (teamId === report.reportedTeamId && report.reportedTeamName) return report.reportedTeamName;
+  return `team ${teamId.slice(0, 8)}`;
+}
 
 export function ReportsQueuePage() {
   const [queue, setQueue] = useState<ReportView[]>([]);
@@ -34,11 +42,14 @@ export function ReportsQueuePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [messages, setMessages] = useState<ConversationMessageView[] | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   function load() {
     setLoading(true);
     reportRepository.queue().then((result) => {
       if (result.ok) setQueue(result.value);
+      else setErrorMessage(result.message);
+      setLoadFailed(!result.ok);
       setLoading(false);
     });
   }
@@ -95,7 +106,8 @@ export function ReportsQueuePage() {
       {loading ? (
         <CircularProgress />
       ) : queue.length === 0 ? (
-        <Typography color="text.secondary">No open reports.</Typography>
+        // After a failed load the error above explains the empty list.
+        !loadFailed && <Typography color="text.secondary">No open reports.</Typography>
       ) : (
         <List dense>
           {queue.map((r) => (
@@ -104,12 +116,23 @@ export function ReportsQueuePage() {
               onClick={() => {
                 setSelected(r);
                 setMessages(null);
+                setReason('');
+                setErrorMessage(null);
               }}
               divider
             >
               <ListItemText
-                primary={`${r.type.replace(/_/g, ' ')} - team ${r.reportedTeamId}`}
-                secondary={`Reported by ${r.reporterTeamId} · ${new Date(r.createdAt).toLocaleString()}`}
+                primary={`${r.type.replace(/_/g, ' ')} - ${r.reportedTeamName ?? `team ${r.reportedTeamId}`}`}
+                secondary={
+                  <>
+                    {`Reported by ${r.reporterTeamName ?? r.reporterTeamId} · ${new Date(r.createdAt).toLocaleString()}`}
+                    {(r.reportedTeamName || r.reporterTeamName) && (
+                      <IdCaption>
+                        Reported team ID {r.reportedTeamId} · reporting team ID {r.reporterTeamId}
+                      </IdCaption>
+                    )}
+                  </>
+                }
               />
               <Chip size="small" label={r.severity} color={SEVERITY_COLOR[r.severity]} sx={{ mr: 1 }} />
               {r.assignedAdminId && <Chip size="small" label="Assigned" variant="outlined" />}
@@ -127,10 +150,20 @@ export function ReportsQueuePage() {
             </DialogTitle>
             <DialogContent>
               <Stack spacing={2} sx={{ mt: 1 }}>
-                <Typography variant="body2">Reported team: {selected.reportedTeamId}</Typography>
-                <Typography variant="body2">Reporting team: {selected.reporterTeamId}</Typography>
+                <TeamNameLine label="Reported team" id={selected.reportedTeamId} name={selected.reportedTeamName} />
+                <TeamNameLine label="Reporting team" id={selected.reporterTeamId} name={selected.reporterTeamName} />
                 {selected.relatedFixtureId && (
                   <Typography variant="body2">Related fixture: {selected.relatedFixtureId}</Typography>
+                )}
+                {selected.details && (
+                  <Stack spacing={0.5}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Details from the reporting team
+                    </Typography>
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {selected.details}
+                    </Typography>
+                  </Stack>
                 )}
                 {selected.internalNotes.length > 0 && (
                   <Stack spacing={0.5}>
@@ -163,7 +196,7 @@ export function ReportsQueuePage() {
                     ) : (
                       messages.map((m) => (
                         <Typography key={m.id} variant="caption" sx={{ display: 'block' }}>
-                          {new Date(m.createdAt).toLocaleString()} · team {m.senderTeamId.slice(0, 8)}: {m.body}
+                          {new Date(m.createdAt).toLocaleString()} · {senderLabel(selected, m.senderTeamId)}: {m.body}
                         </Typography>
                       ))
                     ))}
@@ -176,6 +209,8 @@ export function ReportsQueuePage() {
                   minRows={2}
                   fullWidth
                 />
+                {/* The page's own alert is hidden behind this dialog. */}
+                {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
               </Stack>
             </DialogContent>
             <DialogActions sx={{ flexWrap: 'wrap' }}>

@@ -38,6 +38,9 @@ export interface OverviewResponse {
 export interface VerificationRequestView {
   id: string;
   teamId: string;
+  /** Absent from APIs older than the admin-names change; show teamId instead. */
+  teamName?: string | null;
+  clubName?: string | null;
   affiliationNumber: string | null;
   contactDetails: string;
   evidenceUrls: string[];
@@ -58,9 +61,14 @@ export interface ReportView {
   id: string;
   reporterTeamId: string;
   reportedTeamId: string;
+  /** Absent from APIs older than the admin-names change; show the team IDs instead. */
+  reporterTeamName?: string | null;
+  reportedTeamName?: string | null;
   relatedFixtureId: string | null;
   type: string;
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'SAFEGUARDING';
+  /** What the reporting team wrote, up to 1000 characters. */
+  details: string | null;
   status: 'OPEN' | 'DISMISSED' | 'WARNED' | 'SUSPENDED' | 'ESCALATED';
   assignedAdminId: string | null;
   internalNotes: InternalNoteView[];
@@ -182,6 +190,19 @@ export interface FixtureTeamView {
   managerName: string | null;
   contactPhone: string | null;
   venueId: string | null;
+  badgeUrl?: string | null;
+}
+
+export interface VenueSummary {
+  id: string;
+  name: string;
+  address: string | null;
+  postcode: string | null;
+  pitchSurface: string | null;
+  accessNotes: string | null;
+  parkingNotes: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface FixtureView {
@@ -196,6 +217,8 @@ export interface FixtureView {
   status: string;
   costShare: string;
   refereeArrangement: string;
+  /** The fixture's venue, else the home team's default. Absent from older APIs. */
+  venue?: VenueSummary | null;
 }
 
 export interface FixtureInspectorView {

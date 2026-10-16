@@ -37,6 +37,8 @@ export function MatchingConfigPage() {
   useEffect(() => {
     matchingConfigRepository.current().then((result) => {
       if (result.ok) setWeights((w) => ({ ...w, ...result.value }));
+      // Otherwise the sliders show built-in defaults, not the live weights.
+      else setErrorMessage(result.message);
     });
   }, []);
 
@@ -101,7 +103,7 @@ export function MatchingConfigPage() {
             Advanced tuning
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-            These don't count toward the 100% total above &mdash; they shape how the distance and age factors score, not how much they're worth.
+            These don't count toward the 100% total above - they shape how the distance and age factors score, not how much they're worth.
           </Typography>
           <Stack spacing={2}>
             <Box>

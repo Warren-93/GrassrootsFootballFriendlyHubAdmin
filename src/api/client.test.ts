@@ -7,6 +7,7 @@ function jsonResponse(status: number, body: unknown): Response {
     ok: status >= 200 && status < 300,
     status,
     json: async () => body,
+    text: async () => (body === undefined ? '' : JSON.stringify(body)),
   } as Response;
 }
 
@@ -26,6 +27,14 @@ describe('apiClient', () => {
     const result = await apiClient.get<{ id: string; email: string }>('/api/v1/admin/users/1');
 
     expect(result).toEqual({ ok: true, value: { id: '1', email: 'admin@example.com' } });
+  });
+
+  it('treats a 200 with no body as success (merge, force password reset, resend verification)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(200, undefined));
+
+    const result = await apiClient.post<void>('/api/v1/admin/users/1/force-password-reset');
+
+    expect(result).toEqual({ ok: true, value: undefined });
   });
 
   it('surfaces the backend error envelope message on failure', async () => {
@@ -79,6 +88,6 @@ describe('apiClient', () => {
     await apiClient.get('/api/v1/admin/reports');
 
     const [, init] = vi.mocked(fetch).mock.calls[0];
-    expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer a-valid-token');
+    expect(init?.headers).toMatchObject({ Authorization: 'Bearer a-valid-token' });
   });
 });

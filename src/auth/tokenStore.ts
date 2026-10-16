@@ -4,6 +4,9 @@
 const ACCESS_KEY = 'gffh-admin.accessToken';
 const EMAIL_KEY = 'gffh-admin.email';
 
+/** Fired on window when the API rejects the stored token, so the UI can sign out too. */
+export const SESSION_EXPIRED_EVENT = 'gffh-admin.session-expired';
+
 export const tokenStore = {
   accessToken(): string | null {
     return sessionStorage.getItem(ACCESS_KEY);

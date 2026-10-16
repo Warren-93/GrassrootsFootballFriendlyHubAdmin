@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { verificationRepository } from '../api/adminRepository';
 import type { VerificationRequestView } from '../api/types';
+import { IdCaption, TeamNameLine } from '../components/TeamName';
 
 export function VerificationQueuePage() {
   const [queue, setQueue] = useState<VerificationRequestView[]>([]);
@@ -25,20 +26,28 @@ export function VerificationQueuePage() {
   const [loading, setLoading] = useState(true);
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   function load() {
     setLoading(true);
     verificationRepository.queue().then((result) => {
       if (result.ok) setQueue(result.value);
+      else setErrorMessage(result.message);
+      setLoadFailed(!result.ok);
       setLoading(false);
     });
   }
 
   useEffect(load, []);
 
+  const awaitingSecondRejection = selected?.status === 'AWAITING_SECOND_REJECTION';
+
   async function approve(id: string) {
+    setApproving(true);
     const result = await verificationRepository.approve(id);
+    setApproving(false);
     if (result.ok) {
       setSelected(null);
       load();
@@ -72,14 +81,28 @@ export function VerificationQueuePage() {
       {loading ? (
         <CircularProgress />
       ) : queue.length === 0 ? (
-        <Typography color="text.secondary">Nothing pending review.</Typography>
+        // After a failed load the error above explains the empty list.
+        !loadFailed && <Typography color="text.secondary">Nothing pending review.</Typography>
       ) : (
         <List dense>
           {queue.map((r) => (
-            <ListItemButton key={r.id} onClick={() => setSelected(r)} divider>
+            <ListItemButton
+              key={r.id}
+              onClick={() => {
+                setSelected(r);
+                setRejectReason('');
+                setErrorMessage(null);
+              }}
+              divider
+            >
               <ListItemText
-                primary={`Team ${r.teamId}`}
-                secondary={`Submitted ${new Date(r.submittedAt).toLocaleString()}`}
+                primary={r.teamName ?? `Team ${r.teamId}`}
+                secondary={
+                  <>
+                    {[r.clubName, `Submitted ${new Date(r.submittedAt).toLocaleString()}`].filter(Boolean).join(' · ')}
+                    {r.teamName && <IdCaption>Team ID {r.teamId}</IdCaption>}
+                  </>
+                }
               />
               <Chip size="small" label={r.status.replace(/_/g, ' ')} />
             </ListItemButton>
@@ -90,10 +113,12 @@ export function VerificationQueuePage() {
       <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
         {selected && (
           <>
-            <DialogTitle>Verification request - team {selected.teamId}</DialogTitle>
+            <DialogTitle>Verification request - {selected.teamName ?? `team ${selected.teamId}`}</DialogTitle>
             <DialogContent>
               <Stack spacing={2} sx={{ mt: 1 }}>
-                <Typography variant="body2">Affiliation number: {selected.affiliationNumber ?? '—'}</Typography>
+                <TeamNameLine label="Team" id={selected.teamId} name={selected.teamName} />
+                {selected.clubName && <Typography variant="body2">Club: {selected.clubName}</Typography>}
+                <Typography variant="body2">Affiliation number: {selected.affiliationNumber ?? 'Not given'}</Typography>
                 <Typography variant="body2">Contact: {selected.contactDetails}</Typography>
                 <Box>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -105,30 +130,44 @@ export function VerificationQueuePage() {
                     </Typography>
                   ))}
                 </Box>
-                {selected.status === 'AWAITING_SECOND_REJECTION' && (
+                {awaitingSecondRejection && (
                   <Alert severity="warning">
-                    Already rejected once (reason: "{selected.firstRejectionReason}"). A different administrator
-                    must confirm to finalize.
+                    Already rejected once
+                    {selected.firstRejectionReason ? ` (reason: "${selected.firstRejectionReason}")` : ''}, so it can't
+                    be approved now. A different administrator can confirm the rejection to finalise it.
                   </Alert>
                 )}
+                {/* Only the confirming rejection's reason reaches the team; the first is kept for the second admin. */}
                 <TextField
-                  label="Rejection reason (sent to the applicant verbatim)"
+                  label={
+                    awaitingSecondRejection ? 'Rejection reason (sent to the team as written)' : 'Reason for the second admin'
+                  }
+                  helperText={
+                    awaitingSecondRejection
+                      ? undefined
+                      : "The team isn't told until a different administrator confirms the rejection."
+                  }
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   multiline
                   minRows={2}
                   fullWidth
                 />
+                {/* The page's own alert is hidden behind this dialog. */}
+                {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
               </Stack>
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setSelected(null)}>Close</Button>
-              <Button color="error" disabled={rejecting || !rejectReason} onClick={reject}>
+              <Button color="error" disabled={rejecting || approving || !rejectReason} onClick={reject}>
                 Reject
               </Button>
-              <Button variant="contained" onClick={() => approve(selected.id)}>
-                Approve
-              </Button>
+              {/* The API only approves PENDING requests; the alert above explains why it's missing. */}
+              {!awaitingSecondRejection && (
+                <Button variant="contained" disabled={rejecting || approving} onClick={() => approve(selected.id)}>
+                  Approve
+                </Button>
+              )}
             </DialogActions>
           </>
         )}

@@ -1,6 +1,6 @@
 import type { ApiResult } from './result';
 import { fail, ok } from './result';
-import { tokenStore } from '../auth/tokenStore';
+import { SESSION_EXPIRED_EVENT, tokenStore } from '../auth/tokenStore';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8090';
 
@@ -51,9 +51,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<A
     });
 
     if (response.status === 401 && auth) {
-      // Session expired (30-minute ADM-01 timeout) - clear and let the
-      // caller redirect to sign-in rather than trying to silently refresh.
+      // Session expired (30-minute ADM-01 timeout) - clear it and tell
+      // AdminAuthProvider, which sends the admin back to sign-in, rather
+      // than trying to silently refresh.
       tokenStore.clear();
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
     }
 
     if (!response.ok) {
@@ -62,7 +64,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<A
     if (response.status === 204) {
       return ok(undefined as T);
     }
-    return ok((await response.json()) as T);
+    // Some actions (merge teams, force a password reset, resend verification)
+    // answer 200 with no body, which response.json() would reject.
+    const text = await response.text();
+    return ok((text ? JSON.parse(text) : undefined) as T);
   } catch {
     return fail('Network error - check your connection and try again.');
   }

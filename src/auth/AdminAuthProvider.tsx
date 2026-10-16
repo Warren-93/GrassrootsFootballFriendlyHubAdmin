@@ -1,19 +1,19 @@
-import { createContext, useContext, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { authRepository } from '../api/adminRepository';
-import { tokenStore } from './tokenStore';
-
-interface AdminAuthContextValue {
-  email: string | null;
-  signedIn: boolean;
-  signOut: () => void;
-  setSignedIn: (email: string) => void;
-}
-
-const AdminAuthContext = createContext<AdminAuthContextValue | null>(null);
+import { AdminAuthContext } from './AdminAuthContext';
+import { SESSION_EXPIRED_EVENT, tokenStore } from './tokenStore';
 
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState<string | null>(tokenStore.email());
+
+  // The API client has already cleared the token by the time this fires;
+  // dropping the email here lets ProtectedRoute send the admin to sign-in.
+  useEffect(() => {
+    const onExpired = () => setEmail(null);
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
 
   function signOut() {
     authRepository.signOut();
@@ -29,10 +29,4 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AdminAuthContext.Provider>
   );
-}
-
-export function useAdminAuth(): AdminAuthContextValue {
-  const ctx = useContext(AdminAuthContext);
-  if (!ctx) throw new Error('useAdminAuth must be used within AdminAuthProvider');
-  return ctx;
 }

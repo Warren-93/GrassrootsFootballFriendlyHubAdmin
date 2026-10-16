@@ -69,7 +69,7 @@ export function UsersPage() {
 
   async function forceReset(user: AdminUserView) {
     const result = await adminUserRepository.forcePasswordReset(user.id);
-    setToast(result.ok ? 'Password reset issued (logged server-side - no email provider configured).' : result.message);
+    setToast(result.ok ? 'Password reset issued. The reset link is emailed, or logged on the server when email is not set up.' : result.message);
   }
 
   async function resendVerification(user: AdminUserView) {
