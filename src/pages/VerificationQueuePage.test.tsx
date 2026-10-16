@@ -98,6 +98,54 @@ describe('VerificationQueuePage', () => {
     expect(await within(screen.getByRole('dialog')).findByText('This request has already been reviewed.')).toBeInTheDocument();
   });
 
+  it('offers only Reject on a request already rejected once, and says why', async () => {
+    queueReturns([
+      request({
+        teamName: 'Riverside Rovers U12',
+        status: 'AWAITING_SECOND_REJECTION',
+        firstRejectionReason: 'Evidence is unreadable',
+      }),
+    ]);
+    vi.mocked(verificationRepository.reject).mockResolvedValue({
+      ok: true,
+      value: request({ status: 'REJECTED', finalRejectionReason: 'Evidence is still unreadable' }),
+    });
+
+    render(<VerificationQueuePage />);
+    await userEvent.click(await screen.findByText('Riverside Rovers U12'));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Already rejected once \(reason: "Evidence is unreadable"\), so it can't be approved now/),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText(/A different administrator can confirm the rejection/)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/Rejection reason/), 'Evidence is still unreadable');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }));
+
+    expect(verificationRepository.reject).toHaveBeenCalledWith('v1', 'Evidence is still unreadable');
+  });
+
+  it('offers Approve on a pending request', async () => {
+    queueReturns([request({ teamName: 'Riverside Rovers U12' })]);
+
+    render(<VerificationQueuePage />);
+    await userEvent.click(await screen.findByText('Riverside Rovers U12'));
+
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeEnabled();
+    expect(screen.queryByText(/Already rejected once/)).not.toBeInTheDocument();
+  });
+
+  it('says when no affiliation number was given', async () => {
+    queueReturns([request({ teamName: 'Riverside Rovers U12', affiliationNumber: null })]);
+
+    render(<VerificationQueuePage />);
+    await userEvent.click(await screen.findByText('Riverside Rovers U12'));
+
+    expect(screen.getByText('Affiliation number: Not given')).toBeInTheDocument();
+  });
+
   it('shows the error rather than an empty queue when the load fails', async () => {
     vi.mocked(verificationRepository.queue).mockResolvedValue({
       ok: false,

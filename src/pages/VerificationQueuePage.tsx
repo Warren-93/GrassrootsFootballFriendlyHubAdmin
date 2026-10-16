@@ -42,6 +42,8 @@ export function VerificationQueuePage() {
 
   useEffect(load, []);
 
+  const awaitingSecondRejection = selected?.status === 'AWAITING_SECOND_REJECTION';
+
   async function approve(id: string) {
     setApproving(true);
     const result = await verificationRepository.approve(id);
@@ -116,7 +118,7 @@ export function VerificationQueuePage() {
               <Stack spacing={2} sx={{ mt: 1 }}>
                 <TeamNameLine label="Team" id={selected.teamId} name={selected.teamName} />
                 {selected.clubName && <Typography variant="body2">Club: {selected.clubName}</Typography>}
-                <Typography variant="body2">Affiliation number: {selected.affiliationNumber ?? '—'}</Typography>
+                <Typography variant="body2">Affiliation number: {selected.affiliationNumber ?? 'Not given'}</Typography>
                 <Typography variant="body2">Contact: {selected.contactDetails}</Typography>
                 <Box>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -128,10 +130,11 @@ export function VerificationQueuePage() {
                     </Typography>
                   ))}
                 </Box>
-                {selected.status === 'AWAITING_SECOND_REJECTION' && (
+                {awaitingSecondRejection && (
                   <Alert severity="warning">
-                    Already rejected once (reason: "{selected.firstRejectionReason}"). A different administrator
-                    must confirm to finalise.
+                    Already rejected once
+                    {selected.firstRejectionReason ? ` (reason: "${selected.firstRejectionReason}")` : ''}, so it can't
+                    be approved now. A different administrator can confirm the rejection to finalise it.
                   </Alert>
                 )}
                 <TextField
@@ -151,9 +154,12 @@ export function VerificationQueuePage() {
               <Button color="error" disabled={rejecting || approving || !rejectReason} onClick={reject}>
                 Reject
               </Button>
-              <Button variant="contained" disabled={rejecting || approving} onClick={() => approve(selected.id)}>
-                Approve
-              </Button>
+              {/* The API only approves PENDING requests; the alert above explains why it's missing. */}
+              {!awaitingSecondRejection && (
+                <Button variant="contained" disabled={rejecting || approving} onClick={() => approve(selected.id)}>
+                  Approve
+                </Button>
+              )}
             </DialogActions>
           </>
         )}
