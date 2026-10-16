@@ -137,8 +137,16 @@ export function VerificationQueuePage() {
                     be approved now. A different administrator can confirm the rejection to finalise it.
                   </Alert>
                 )}
+                {/* Only the confirming rejection's reason reaches the team; the first is kept for the second admin. */}
                 <TextField
-                  label="Rejection reason (sent to the applicant verbatim)"
+                  label={
+                    awaitingSecondRejection ? 'Rejection reason (sent to the team as written)' : 'Reason for the second admin'
+                  }
+                  helperText={
+                    awaitingSecondRejection
+                      ? undefined
+                      : "The team isn't told until a different administrator confirms the rejection."
+                  }
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   multiline

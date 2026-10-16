@@ -75,12 +75,12 @@ describe('VerificationQueuePage', () => {
 
     render(<VerificationQueuePage />);
     await userEvent.click(await screen.findByText('Riverside Rovers U12'));
-    await userEvent.type(screen.getByLabelText(/Rejection reason/), 'Evidence is unreadable');
+    await userEvent.type(screen.getByLabelText('Reason for the second admin'), 'Evidence is unreadable');
     await userEvent.click(screen.getByRole('button', { name: 'Close' }));
     await userEvent.click(await screen.findByText('Hilltop Hawks U12'));
 
     expect(await screen.findByText('Verification request - Hilltop Hawks U12')).toBeInTheDocument();
-    expect(screen.getByLabelText(/Rejection reason/)).toHaveValue('');
+    expect(screen.getByLabelText('Reason for the second admin')).toHaveValue('');
   });
 
   it('shows a failed approval inside the dialog, where the admin can see it', async () => {
@@ -120,8 +120,12 @@ describe('VerificationQueuePage', () => {
       within(dialog).getByText(/Already rejected once \(reason: "Evidence is unreadable"\), so it can't be approved now/),
     ).toBeInTheDocument();
     expect(within(dialog).getByText(/A different administrator can confirm the rejection/)).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('Reason for the second admin')).not.toBeInTheDocument();
 
-    await userEvent.type(screen.getByLabelText(/Rejection reason/), 'Evidence is still unreadable');
+    await userEvent.type(
+      within(dialog).getByLabelText('Rejection reason (sent to the team as written)'),
+      'Evidence is still unreadable',
+    );
     await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }));
 
     expect(verificationRepository.reject).toHaveBeenCalledWith('v1', 'Evidence is still unreadable');
@@ -134,6 +138,29 @@ describe('VerificationQueuePage', () => {
     await userEvent.click(await screen.findByText('Riverside Rovers U12'));
 
     expect(screen.getByText(/^Already rejected once, so it can't be approved now\./)).toBeInTheDocument();
+  });
+
+  it('says a first rejection reason goes to the second admin, not the team', async () => {
+    queueReturns([request({ teamName: 'Riverside Rovers U12' })]);
+    vi.mocked(verificationRepository.reject).mockResolvedValue({
+      ok: true,
+      value: request({ status: 'AWAITING_SECOND_REJECTION', firstRejectionReason: 'Evidence is unreadable' }),
+    });
+
+    render(<VerificationQueuePage />);
+    await userEvent.click(await screen.findByText('Riverside Rovers U12'));
+
+    const dialog = screen.getByRole('dialog');
+    const reason = within(dialog).getByLabelText('Reason for the second admin');
+    expect(reason).toHaveAccessibleDescription(
+      "The team isn't told until a different administrator confirms the rejection.",
+    );
+    expect(within(dialog).queryByLabelText(/sent to the team/)).not.toBeInTheDocument();
+
+    await userEvent.type(reason, 'Evidence is unreadable');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }));
+
+    expect(verificationRepository.reject).toHaveBeenCalledWith('v1', 'Evidence is unreadable');
   });
 
   it('offers Approve on a pending request', async () => {
