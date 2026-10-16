@@ -94,7 +94,7 @@ export function AuditLogPage() {
                 <TableCell>
                   {e.targetType} {e.targetId}
                 </TableCell>
-                <TableCell>{e.reason ?? '—'}</TableCell>
+                <TableCell>{e.reason ?? 'None'}</TableCell>
               </TableRow>
             ))}
           </TableBody>
