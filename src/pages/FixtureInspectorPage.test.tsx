@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FixtureInspectorPage } from './FixtureInspectorPage';
-import { fixtureInspectorRepository } from '../api/adminRepository';
-import type { FixtureInspectorView, FixtureTeamView } from '../api/types';
+import { adminConversationRepository, fixtureInspectorRepository } from '../api/adminRepository';
+import type { ConversationMessageView, FixtureInspectorView, FixtureTeamView } from '../api/types';
 
 vi.mock('../api/adminRepository', () => ({
   fixtureInspectorRepository: { get: vi.fn() },
@@ -34,6 +34,10 @@ function inspected(overrides: Partial<FixtureInspectorView['fixture']> = {}): Fi
   };
 }
 
+function message(id: string, senderTeamId: string, body: string): ConversationMessageView {
+  return { id, conversationId: 'c1', senderTeamId, senderUserId: 'u1', body, createdAt: '2026-10-15T12:00:00Z' };
+}
+
 async function inspect() {
   render(<FixtureInspectorPage />);
   await userEvent.type(screen.getByLabelText('Fixture ID'), 'f1');
@@ -43,6 +47,7 @@ async function inspect() {
 describe('FixtureInspectorPage', () => {
   beforeEach(() => {
     vi.mocked(fixtureInspectorRepository.get).mockReset();
+    vi.mocked(adminConversationRepository.between).mockReset();
   });
 
   it('shows the venue name, address and postcode', async () => {
@@ -97,5 +102,25 @@ describe('FixtureInspectorPage', () => {
     await inspect();
 
     expect(await screen.findByText('Venue: not set')).toBeInTheDocument();
+  });
+
+  it('labels each message with the sending team name', async () => {
+    vi.mocked(fixtureInspectorRepository.get).mockResolvedValue({ ok: true, value: inspected() });
+    vi.mocked(adminConversationRepository.between).mockResolvedValue({
+      ok: true,
+      value: [
+        message('m1', 'h1', 'Saturday at 10 works for us'),
+        message('m2', 'a1', 'Great, see you then'),
+        message('m3', '0123456789abcdef', 'From a team no longer on the fixture'),
+      ],
+    });
+
+    await inspect();
+    await userEvent.click(await screen.findByRole('button', { name: 'Load messages' }));
+
+    expect(await screen.findByText(/· Riverside Rovers U12: Saturday at 10 works for us$/)).toBeInTheDocument();
+    expect(screen.getByText(/· Hilltop Hawks U12: Great, see you then$/)).toBeInTheDocument();
+    expect(screen.getByText(/· team 01234567: From a team no longer on the fixture$/)).toBeInTheDocument();
+    expect(adminConversationRepository.between).toHaveBeenCalledWith('h1', 'a1');
   });
 });
