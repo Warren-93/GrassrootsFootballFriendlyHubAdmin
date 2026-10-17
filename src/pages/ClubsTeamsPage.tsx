@@ -22,6 +22,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CallMergeIcon from '@mui/icons-material/CallMerge';
 import { adminTeamRepository } from '../api/adminRepository';
 import type { AdminTeamView } from '../api/types';
+import { abilityLevelLabel, organisationLabel } from '../api/teamLabels';
 
 export function ClubsTeamsPage() {
   const [rows, setRows] = useState<AdminTeamView[]>([]);
@@ -95,7 +96,8 @@ export function ClubsTeamsPage() {
     { field: 'ageGroup', headerName: 'Age group', width: 100 },
     { field: 'gender', headerName: 'Gender', width: 90 },
     { field: 'format', headerName: 'Format', width: 130, valueFormatter: (value: string) => value?.replace(/_/g, ' ') },
-    { field: 'abilityLevel', headerName: 'Ability', width: 130 },
+    { field: 'abilityLevel', headerName: 'Division', width: 190, valueFormatter: (value: string | null) => abilityLevelLabel(value) },
+    { field: 'organisation', headerName: 'Organisation', width: 220, valueFormatter: (value: string | null) => organisationLabel(value) },
     {
       field: 'verification',
       headerName: 'Verification',
