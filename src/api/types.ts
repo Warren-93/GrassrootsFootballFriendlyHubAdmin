@@ -76,6 +76,10 @@ export interface ReportView {
   updatedAt: string;
 }
 
+export type AbilityLevel = 'PREMIER' | 'DIVISION_1' | 'DIVISION_2' | 'DIVISION_3_PLUS' | 'NOT_IN_LEAGUE' | 'FESTIVAL';
+
+export type Organisation = 'SYFA' | 'SAFA' | 'SWF' | 'SWFA' | 'SSFA' | 'SJFA' | 'OTHER';
+
 export interface AdminTeamView {
   id: string;
   clubId: string;
@@ -84,7 +88,10 @@ export interface AdminTeamView {
   ageGroup: string;
   gender: string;
   format: string;
-  abilityLevel: string;
+  /** Division the team plays in. See ABILITY_LEVEL_LABELS. */
+  abilityLevel: AbilityLevel;
+  /** Governing body the team is affiliated to; null when not set. Absent from older APIs. */
+  organisation?: Organisation | null;
   verification: string;
   suspended: boolean;
 }
