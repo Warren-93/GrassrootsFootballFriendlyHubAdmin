@@ -1,126 +1,51 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { describe, expect, it, vi } from 'vitest';
 import { FixtureInspectorPage } from './FixtureInspectorPage';
-import { adminConversationRepository, fixtureInspectorRepository } from '../api/adminRepository';
-import type { ConversationMessageView, FixtureInspectorView, FixtureTeamView } from '../api/types';
+import { fixtureInspectorRepository } from '../api/adminRepository';
 
 vi.mock('../api/adminRepository', () => ({
-  fixtureInspectorRepository: { get: vi.fn() },
-  adminConversationRepository: { between: vi.fn() },
+  fixtureInspectorRepository: { list: vi.fn(), get: vi.fn() },
 }));
 
-function team(id: string, name: string): FixtureTeamView {
-  return { id, name, clubName: `${name} FC`, managerName: null, contactPhone: null, venueId: null };
-}
-
-function inspected(overrides: Partial<FixtureInspectorView['fixture']> = {}): FixtureInspectorView {
-  return {
-    fixture: {
-      id: 'f1',
-      friendlyRequestId: 'r1',
-      homeTeam: team('h1', 'Riverside Rovers U12'),
-      awayTeam: team('a1', 'Hilltop Hawks U12'),
-      date: '2026-10-24',
-      startTime: '10:00',
-      endTime: '11:30',
-      venueId: null,
-      status: 'CONFIRMED',
-      costShare: 'SPLIT',
-      refereeArrangement: 'CLUB_SUPPLIED',
-      ...overrides,
-    },
-    auditTrail: [],
-  };
-}
-
-function message(id: string, senderTeamId: string, body: string): ConversationMessageView {
-  return { id, conversationId: 'c1', senderTeamId, senderUserId: 'u1', body, createdAt: '2026-10-15T12:00:00Z' };
-}
-
-async function inspect() {
-  render(<FixtureInspectorPage />);
-  await userEvent.type(screen.getByLabelText('Fixture ID'), 'f1');
-  await userEvent.click(screen.getByRole('button', { name: 'Inspect' }));
-}
-
 describe('FixtureInspectorPage', () => {
-  beforeEach(() => {
-    vi.mocked(fixtureInspectorRepository.get).mockReset();
-    vi.mocked(adminConversationRepository.between).mockReset();
-  });
-
-  it('shows the venue name, address and postcode', async () => {
-    vi.mocked(fixtureInspectorRepository.get).mockResolvedValue({
-      ok: true,
-      value: inspected({
-        venue: {
-          id: 'v1',
-          name: 'Riverside Park',
-          address: '1 River Lane, Leeds',
-          postcode: 'LS1 4AB',
-          pitchSurface: null,
-          accessNotes: null,
-          parkingNotes: null,
-          latitude: null,
-          longitude: null,
-        },
-      }),
-    });
-
-    await inspect();
-
-    expect(await screen.findByText('Venue: Riverside Park, 1 River Lane, Leeds, LS1 4AB')).toBeInTheDocument();
-  });
-
-  it("doesn't repeat a postcode the address already has", async () => {
-    vi.mocked(fixtureInspectorRepository.get).mockResolvedValue({
-      ok: true,
-      value: inspected({
-        venue: {
-          id: 'v1',
-          name: 'Riverside Park',
-          address: '1 River Lane, Leeds LS1 4AB',
-          postcode: 'LS1 4AB',
-          pitchSurface: null,
-          accessNotes: null,
-          parkingNotes: null,
-          latitude: null,
-          longitude: null,
-        },
-      }),
-    });
-
-    await inspect();
-
-    expect(await screen.findByText('Venue: Riverside Park, 1 River Lane, Leeds LS1 4AB')).toBeInTheDocument();
-  });
-
-  it('says when no venue is set', async () => {
-    vi.mocked(fixtureInspectorRepository.get).mockResolvedValue({ ok: true, value: inspected() });
-
-    await inspect();
-
-    expect(await screen.findByText('Venue: not set')).toBeInTheDocument();
-  });
-
-  it('labels each message with the sending team name', async () => {
-    vi.mocked(fixtureInspectorRepository.get).mockResolvedValue({ ok: true, value: inspected() });
-    vi.mocked(adminConversationRepository.between).mockResolvedValue({
+  it('lists fixtures, searches by team, and opens one on click', async () => {
+    vi.mocked(fixtureInspectorRepository.list).mockResolvedValue({
       ok: true,
       value: [
-        message('m1', 'h1', 'Saturday at 10 works for us'),
-        message('m2', 'a1', 'Great, see you then'),
-        message('m3', '0123456789abcdef', 'From a team no longer on the fixture'),
+        {
+          id: 'f1',
+          date: '2026-11-01',
+          startTime: '10:00:00',
+          endTime: '11:30:00',
+          status: 'CONFIRMED',
+          homeTeamId: 'h1',
+          homeTeamName: 'Riverside Rovers',
+          awayTeamId: 'a1',
+          awayTeamName: 'Hilltop Hawks',
+          venueName: 'Riverside Park',
+          createdAt: '2026-10-20T10:00:00Z',
+        },
       ],
     });
 
-    await inspect();
-    await userEvent.click(await screen.findByRole('button', { name: 'Load messages' }));
+    render(
+      <MemoryRouter initialEntries={['/fixtures']}>
+        <Routes>
+          <Route path="/fixtures" element={<FixtureInspectorPage />} />
+          <Route path="/fixtures/:fixtureId" element={<div>Opened fixture</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
 
-    expect(await screen.findByText(/· Riverside Rovers U12: Saturday at 10 works for us$/)).toBeInTheDocument();
-    expect(screen.getByText(/· Hilltop Hawks U12: Great, see you then$/)).toBeInTheDocument();
-    expect(screen.getByText(/· team 01234567: From a team no longer on the fixture$/)).toBeInTheDocument();
-    expect(adminConversationRepository.between).toHaveBeenCalledWith('h1', 'a1');
+    expect(await screen.findByText('Riverside Rovers')).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Team'), 'hawks');
+    await vi.waitFor(() =>
+      expect(fixtureInspectorRepository.list).toHaveBeenLastCalledWith(expect.objectContaining({ teamQuery: 'hawks' })),
+    );
+
+    await userEvent.click(screen.getByText('Hilltop Hawks'));
+    expect(await screen.findByText('Opened fixture')).toBeInTheDocument();
   });
 });

@@ -20,6 +20,11 @@ import VerifiedIcon from '@mui/icons-material/Verified';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CallMergeIcon from '@mui/icons-material/CallMerge';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import { useNavigate } from 'react-router-dom';
+import { dateTime } from '../api/format';
+import { DeleteDialog } from '../components/DeleteDialog';
 import { adminTeamRepository } from '../api/adminRepository';
 import type { AdminTeamView } from '../api/types';
 import { abilityLevelLabel, organisationLabel } from '../api/teamLabels';
@@ -33,6 +38,8 @@ export function ClubsTeamsPage() {
   const [merging, setMerging] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<AdminTeamView | null>(null);
+  const navigate = useNavigate();
 
   function load(searchQuery: string) {
     setLoading(true);
@@ -113,13 +120,22 @@ export function ClubsTeamsPage() {
       renderCell: ({ value }) =>
         value ? <Chip size="small" label="Suspended" color="error" /> : <Chip size="small" label="Active" color="success" variant="outlined" />,
     },
+    { field: 'createdAt', headerName: 'Created', width: 170, valueFormatter: (value: string | null) => dateTime(value) },
+    { field: 'updatedAt', headerName: 'Last updated', width: 170, valueFormatter: (value: string | null) => dateTime(value) },
     {
       field: 'actions',
       type: 'actions',
       headerName: 'Actions',
-      width: 150,
+      width: 200,
       getActions: ({ row }) => {
-        const actions = [];
+        const actions = [
+          <GridActionsCellItem
+            key="view"
+            icon={<VisibilityIcon fontSize="small" />}
+            label="View details"
+            onClick={() => navigate(`/teams/${row.id}`)}
+          />,
+        ];
         if (row.verification !== 'VERIFIED') {
           actions.push(
             <GridActionsCellItem
@@ -142,6 +158,13 @@ export function ClubsTeamsPage() {
             icon={row.suspended ? <CheckCircleIcon fontSize="small" color="success" /> : <BlockIcon fontSize="small" color="error" />}
             label={row.suspended ? 'Unsuspend' : 'Suspend'}
             onClick={() => toggleSuspend(row)}
+          />,
+          <GridActionsCellItem
+            key="delete"
+            icon={<DeleteForeverIcon fontSize="small" color="error" />}
+            label="Delete permanently…"
+            onClick={() => setDeleting(row)}
+            showInMenu
           />,
         );
         return actions;
@@ -178,6 +201,7 @@ export function ClubsTeamsPage() {
         autoHeight
         density="compact"
         disableRowSelectionOnClick
+        onRowDoubleClick={({ row }) => navigate(`/teams/${row.id}`)}
         showToolbar
         pageSizeOptions={[25, 50, 100]}
         initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
@@ -207,6 +231,25 @@ export function ClubsTeamsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {deleting && (
+        <DeleteDialog
+          open
+          targetType="TEAM"
+          targetId={deleting.id}
+          onClose={() => setDeleting(null)}
+          onDone={(outcome) => {
+            const team = deleting;
+            setDeleting(null);
+            if (outcome === 'deleted') {
+              setToast(`${team.name} was permanently deleted.`);
+              load(query);
+            } else {
+              setToast('Sent to the super admin for approval. Nothing has been deleted yet.');
+            }
+          }}
+        />
+      )}
 
       <Snackbar open={!!toast} autoHideDuration={4000} onClose={() => setToast(null)} message={toast} />
     </Stack>
