@@ -8,6 +8,7 @@ import { ClubsTeamsPage } from './pages/ClubsTeamsPage';
 import { UsersPage } from './pages/UsersPage';
 import { FixtureInspectorPage } from './pages/FixtureInspectorPage';
 import { MatchingConfigPage } from './pages/MatchingConfigPage';
+import { ChatFilterPage } from './pages/ChatFilterPage';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { AdminLayout } from './layout/AdminLayout';
 import { ProtectedRoute } from './routes/ProtectedRoute';
@@ -27,6 +28,7 @@ function App() {
           <Route path="/users" element={<UsersPage />} />
           <Route path="/fixtures" element={<FixtureInspectorPage />} />
           <Route path="/matching-config" element={<MatchingConfigPage />} />
+          <Route path="/chat-filter" element={<ChatFilterPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
         </Route>
       </Route>

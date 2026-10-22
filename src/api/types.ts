@@ -175,8 +175,18 @@ export interface ConversationMessageView {
   conversationId: string;
   senderTeamId: string;
   senderUserId: string;
+  /** Empty for a GIF-only message. Blocked words were masked (****) when it was sent. */
   body: string;
   createdAt: string;
+  gif?: { id: string; title: string; url: string } | null;
+}
+
+/** The chat language filter's word list. `usingDefaults` until an admin first saves one. */
+export interface ChatFilterView {
+  words: string[];
+  usingDefaults: boolean;
+  updatedByAdminId: string | null;
+  updatedAt: string | null;
 }
 
 export interface AuditLogEntry {
