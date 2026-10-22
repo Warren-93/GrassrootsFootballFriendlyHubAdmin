@@ -10,6 +10,11 @@ import { FixtureInspectorPage } from './pages/FixtureInspectorPage';
 import { MatchingConfigPage } from './pages/MatchingConfigPage';
 import { ChatFilterPage } from './pages/ChatFilterPage';
 import { AuditLogPage } from './pages/AuditLogPage';
+import { UserDetailPage } from './pages/UserDetailPage';
+import { TeamDetailPage } from './pages/TeamDetailPage';
+import { FixtureDetailPage } from './pages/FixtureDetailPage';
+import { DeletionRequestsPage } from './pages/DeletionRequestsPage';
+import { AdminsPage } from './pages/AdminsPage';
 import { AdminLayout } from './layout/AdminLayout';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 
@@ -25,8 +30,13 @@ function App() {
           <Route path="/verifications" element={<VerificationQueuePage />} />
           <Route path="/reports" element={<ReportsQueuePage />} />
           <Route path="/teams" element={<ClubsTeamsPage />} />
+          <Route path="/teams/:teamId" element={<TeamDetailPage />} />
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/users/:userId" element={<UserDetailPage />} />
           <Route path="/fixtures" element={<FixtureInspectorPage />} />
+          <Route path="/fixtures/:fixtureId" element={<FixtureDetailPage />} />
+          <Route path="/deletions" element={<DeletionRequestsPage />} />
+          <Route path="/admins" element={<AdminsPage />} />
           <Route path="/matching-config" element={<MatchingConfigPage />} />
           <Route path="/chat-filter" element={<ChatFilterPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />

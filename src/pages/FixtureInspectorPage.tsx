@@ -1,52 +1,58 @@
-import { useState } from 'react';
-import { Alert, Button, Card, CardContent, Divider, Stack, TextField, Typography } from '@mui/material';
-import { adminConversationRepository, fixtureInspectorRepository } from '../api/adminRepository';
-import type { ConversationMessageView, FixtureInspectorView, FixtureView, VenueSummary } from '../api/types';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Alert, Button, Chip, CircularProgress, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { DataGrid, type GridColDef } from '@mui/x-data-grid';
+import SearchIcon from '@mui/icons-material/Search';
+import { fixtureInspectorRepository, type FixtureSearch } from '../api/adminRepository';
+import type { FixtureListItem } from '../api/types';
 
-/** "Name, address, postcode", leaving the postcode off when the address already contains it. */
-function venueLine(venue: VenueSummary): string {
-  const squash = (s: string) => s.replace(/\s+/g, '').toUpperCase();
-  const postcode = venue.postcode?.trim();
-  const showPostcode = postcode && !squash(venue.address ?? '').includes(squash(postcode));
-  return [venue.name, venue.address, showPostcode ? postcode : null].filter(Boolean).join(', ');
-}
+const STATUSES = ['', 'CONFIRMED', 'COMPLETED', 'CANCELLED'];
 
-/** The sending team's name, or "team <start of its ID>" if it isn't one of the fixture's two teams. */
-function senderLabel(fixture: FixtureView, senderTeamId: string): string {
-  const team = [fixture.homeTeam, fixture.awayTeam].find((t) => t.id === senderTeamId);
-  return team?.name || `team ${senderTeamId.slice(0, 8)}`;
-}
-
+/**
+ * Every fixture, newest date first, searchable by team name (either side),
+ * a date range and status. Click a row to open it in full.
+ */
 export function FixtureInspectorPage() {
-  const [fixtureId, setFixtureId] = useState('');
-  const [view, setView] = useState<FixtureInspectorView | null>(null);
+  const navigate = useNavigate();
+  const [search, setSearch] = useState<FixtureSearch>({});
+  const [rows, setRows] = useState<FixtureListItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<ConversationMessageView[] | null>(null);
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [fixtureId, setFixtureId] = useState('');
 
-  async function load() {
-    if (!fixtureId) return;
-    setLoading(true);
-    setErrorMessage(null);
-    setMessages(null);
-    const result = await fixtureInspectorRepository.get(fixtureId);
-    setLoading(false);
-    if (result.ok) setView(result.value);
-    else {
-      setView(null);
-      setErrorMessage(result.message);
-    }
-  }
+  // Debounced so typing a team name doesn't fire a request per keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(true);
+      fixtureInspectorRepository.list(search).then((result) => {
+        setLoading(false);
+        if (result.ok) setRows(result.value);
+        else setErrorMessage(result.message);
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  async function loadMessages() {
-    if (!view) return;
-    setLoadingMessages(true);
-    const result = await adminConversationRepository.between(view.fixture.homeTeam.id, view.fixture.awayTeam.id);
-    setLoadingMessages(false);
-    if (result.ok) setMessages(result.value);
-    else setErrorMessage(result.message);
-  }
+  const columns: GridColDef<FixtureListItem>[] = [
+    { field: 'date', headerName: 'Date', width: 110 },
+    {
+      field: 'startTime',
+      headerName: 'Time',
+      width: 110,
+      valueGetter: (_, row) => `${row.startTime?.slice(0, 5)}-${row.endTime?.slice(0, 5)}`,
+    },
+    { field: 'homeTeamName', headerName: 'Home', flex: 1, minWidth: 160 },
+    { field: 'awayTeamName', headerName: 'Away', flex: 1, minWidth: 160 },
+    { field: 'venueName', headerName: 'Venue', flex: 1, minWidth: 140 },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 120,
+      renderCell: ({ value }) => (
+        <Chip size="small" label={value} variant="outlined" color={value === 'CONFIRMED' ? 'success' : value === 'CANCELLED' ? 'error' : 'default'} />
+      ),
+    },
+  ];
 
   return (
     <Stack spacing={2}>
@@ -54,91 +60,80 @@ export function FixtureInspectorPage() {
         Fixture inspector
       </Typography>
       <Typography variant="caption" color="text.secondary">
-        Read-only. Message content is loaded separately, on request, and every view is audit-logged.
+        Click a fixture to see it in full. Read-only; message content is loaded on request and every view is audit-logged.
       </Typography>
+
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+        <TextField
+          label="Team"
+          placeholder="Part of either team's name"
+          size="small"
+          value={search.teamQuery ?? ''}
+          onChange={(e) => setSearch((s) => ({ ...s, teamQuery: e.target.value }))}
+          slotProps={{ input: { startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} /> } }}
+          sx={{ minWidth: 240 }}
+        />
+        <TextField
+          label="From"
+          type="date"
+          size="small"
+          value={search.from ?? ''}
+          onChange={(e) => setSearch((s) => ({ ...s, from: e.target.value }))}
+          slotProps={{ inputLabel: { shrink: true } }}
+        />
+        <TextField
+          label="To"
+          type="date"
+          size="small"
+          value={search.to ?? ''}
+          onChange={(e) => setSearch((s) => ({ ...s, to: e.target.value }))}
+          slotProps={{ inputLabel: { shrink: true } }}
+        />
+        <TextField
+          select
+          label="Status"
+          size="small"
+          value={search.status ?? ''}
+          onChange={(e) => setSearch((s) => ({ ...s, status: e.target.value }))}
+          sx={{ minWidth: 140 }}
+        >
+          {STATUSES.map((s) => (
+            <MenuItem key={s} value={s}>
+              {s || 'Any'}
+            </MenuItem>
+          ))}
+        </TextField>
+        <Button onClick={() => setSearch({})}>Clear</Button>
+      </Stack>
+
+      {errorMessage && <Alert severity="error" onClose={() => setErrorMessage(null)}>{errorMessage}</Alert>}
+
+      <DataGrid
+        rows={rows}
+        columns={columns}
+        loading={loading}
+        autoHeight
+        density="compact"
+        onRowClick={({ row }) => navigate(`/fixtures/${row.id}`)}
+        sx={{ '& .MuiDataGrid-row': { cursor: 'pointer' } }}
+        pageSizeOptions={[25, 50, 100]}
+        initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+        slots={{ loadingOverlay: () => <CircularProgress sx={{ m: 4 }} /> }}
+      />
 
       <Stack direction="row" spacing={1}>
         <TextField
-          label="Fixture ID"
+          label="Open by fixture ID"
           value={fixtureId}
           onChange={(e) => setFixtureId(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && load()}
+          onKeyDown={(e) => e.key === 'Enter' && fixtureId.trim() && navigate(`/fixtures/${fixtureId.trim()}`)}
           size="small"
-          fullWidth
+          sx={{ minWidth: 320 }}
         />
-        <Button variant="contained" disabled={loading} onClick={load}>
-          Inspect
+        <Button disabled={!fixtureId.trim()} onClick={() => navigate(`/fixtures/${fixtureId.trim()}`)}>
+          Open
         </Button>
       </Stack>
-
-      {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
-
-      {view && (
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              {view.fixture.homeTeam.name} vs {view.fixture.awayTeam.name}
-            </Typography>
-            <Typography variant="body2">
-              {view.fixture.date} {view.fixture.startTime}-{view.fixture.endTime} · {view.fixture.status}
-            </Typography>
-            <Typography variant="body2">Cost share: {view.fixture.costShare}</Typography>
-            <Typography variant="body2">Referee: {view.fixture.refereeArrangement}</Typography>
-            <Typography variant="body2">
-              Venue:{' '}
-              {view.fixture.venue ? venueLine(view.fixture.venue) : 'not set'}
-            </Typography>
-
-            <Divider sx={{ my: 2 }} />
-
-            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                Messages between these teams
-              </Typography>
-              {messages === null && (
-                <Button size="small" disabled={loadingMessages} onClick={loadMessages}>
-                  {loadingMessages ? 'Loading…' : 'Load messages'}
-                </Button>
-              )}
-            </Stack>
-            {messages !== null && (
-              <Stack spacing={0.5} sx={{ mb: 2 }}>
-                {messages.length === 0 ? (
-                  <Typography variant="caption" color="text.secondary">
-                    No conversation exists between these two teams.
-                  </Typography>
-                ) : (
-                  messages.map((m) => (
-                    <Typography key={m.id} variant="caption" sx={{ display: 'block' }}>
-                      {new Date(m.createdAt).toLocaleString()} · {senderLabel(view.fixture, m.senderTeamId)}: {m.body}
-                    </Typography>
-                  ))
-                )}
-              </Stack>
-            )}
-
-            <Divider sx={{ my: 2 }} />
-
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-              Audit trail
-            </Typography>
-            {view.auditTrail.length === 0 ? (
-              <Typography variant="caption" color="text.secondary">
-                No administrator actions recorded against this fixture.
-              </Typography>
-            ) : (
-              <Stack spacing={0.5}>
-                {view.auditTrail.map((entry) => (
-                  <Typography key={entry.id} variant="caption">
-                    {new Date(entry.timestamp).toLocaleString()} · {entry.actorEmail} · {entry.action}
-                    {entry.reason ? ` - "${entry.reason}"` : ''}
-                  </Typography>
-                ))}
-              </Stack>
-            )}
-          </CardContent>
-        </Card>
-      )}
     </Stack>
   );
 }

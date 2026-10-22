@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   Button,
   Chip,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Snackbar,
   Stack,
   TextField,
@@ -25,12 +22,15 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { adminUserRepository } from '../api/adminRepository';
 import type { AdminUserView } from '../api/types';
+import { ago, dateTime } from '../api/format';
+import { DeleteDialog } from '../components/DeleteDialog';
 
 export function UsersPage() {
   const [rows, setRows] = useState<AdminUserView[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<AdminUserView | null>(null);
+  const [deleting, setDeleting] = useState<AdminUserView | null>(null);
+  const navigate = useNavigate();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -55,7 +55,6 @@ export function UsersPage() {
 
   function updateRow(user: AdminUserView) {
     setRows((prev) => prev.map((u) => (u.id === user.id ? user : u)));
-    if (selected?.id === user.id) setSelected(user);
   }
 
   async function toggleSuspend(user: AdminUserView) {
@@ -87,23 +86,6 @@ export function UsersPage() {
     }
   }
 
-  async function deleteUser(user: AdminUserView) {
-    if (
-      !window.confirm(
-        `Permanently delete ${user.displayName} (${user.email})? This removes their account and club/team memberships. This cannot be undone.`,
-      )
-    )
-      return;
-    const result = await adminUserRepository.delete(user.id);
-    if (result.ok) {
-      setRows((prev) => prev.filter((u) => u.id !== user.id));
-      if (selected?.id === user.id) setSelected(null);
-      setToast('User deleted.');
-    } else {
-      setErrorMessage(result.message);
-    }
-  }
-
   const columns: GridColDef<AdminUserView>[] = [
     { field: 'displayName', headerName: 'Name', flex: 1, minWidth: 160 },
     { field: 'email', headerName: 'Email', flex: 1.2, minWidth: 200 },
@@ -128,6 +110,18 @@ export function UsersPage() {
       valueGetter: (_, row) => row.memberships.length,
     },
     {
+      field: 'createdAt',
+      headerName: 'Joined',
+      width: 170,
+      valueFormatter: (value: string | null) => dateTime(value),
+    },
+    {
+      field: 'lastActiveAt',
+      headerName: 'Last active',
+      width: 120,
+      valueFormatter: (value: string | null) => ago(value),
+    },
+    {
       field: 'actions',
       type: 'actions',
       headerName: 'Actions',
@@ -138,7 +132,7 @@ export function UsersPage() {
             key="view"
             icon={<VisibilityIcon fontSize="small" />}
             label="View details"
-            onClick={() => setSelected(row)}
+            onClick={() => navigate(`/users/${row.id}`)}
           />,
         ];
         if (!row.emailVerified) {
@@ -173,8 +167,8 @@ export function UsersPage() {
           <GridActionsCellItem
             key="delete"
             icon={<DeleteForeverIcon fontSize="small" color="error" />}
-            label="Delete account"
-            onClick={() => deleteUser(row)}
+            label="Delete permanently…"
+            onClick={() => setDeleting(row)}
           />,
         );
         return actions;
@@ -211,43 +205,31 @@ export function UsersPage() {
         autoHeight
         density="compact"
         disableRowSelectionOnClick
+        onRowDoubleClick={({ row }) => navigate(`/users/${row.id}`)}
         showToolbar
         pageSizeOptions={[25, 50, 100]}
         initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
         slots={{ loadingOverlay: () => <CircularProgress sx={{ m: 4 }} /> }}
       />
 
-      <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="xs" fullWidth>
-        {selected && (
-          <>
-            <DialogTitle>{selected.displayName}</DialogTitle>
-            <DialogContent>
-              <Stack spacing={2} sx={{ mt: 1 }}>
-                <Typography variant="body2">{selected.email}</Typography>
-                <Stack spacing={0.5}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    Roles across clubs/teams
-                  </Typography>
-                  {selected.memberships.length === 0 ? (
-                    <Typography variant="caption" color="text.secondary">
-                      No memberships.
-                    </Typography>
-                  ) : (
-                    selected.memberships.map((m, i) => (
-                      <Typography key={i} variant="caption">
-                        {m.role} · {m.teamId ? `team ${m.teamId}` : `club ${m.clubId}`}
-                      </Typography>
-                    ))
-                  )}
-                </Stack>
-              </Stack>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setSelected(null)}>Close</Button>
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
+      {deleting && (
+        <DeleteDialog
+          open
+          targetType="USER"
+          targetId={deleting.id}
+          onClose={() => setDeleting(null)}
+          onDone={(outcome) => {
+            const user = deleting;
+            setDeleting(null);
+            if (outcome === 'deleted') {
+              setRows((prev) => prev.filter((u) => u.id !== user.id));
+              setToast(`${user.displayName} was permanently deleted.`);
+            } else {
+              setToast('Sent to the super admin for approval. Nothing has been deleted yet.');
+            }
+          }}
+        />
+      )}
 
       <Snackbar open={!!toast} autoHideDuration={4000} onClose={() => setToast(null)} message={toast} />
     </Stack>

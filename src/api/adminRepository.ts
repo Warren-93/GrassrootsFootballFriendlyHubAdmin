@@ -1,14 +1,24 @@
 import { apiClient } from './client';
 import { tokenStore } from '../auth/tokenStore';
 import type {
+  AdminAccountView,
+  AdminMe,
+  AdminTeamDetail,
   AdminTeamView,
+  AdminUserDetail,
   AdminUserView,
   AuditLogEntry,
   BootstrapResponse,
   ChatFilterView,
   ConversationMessageView,
+  CreateAdminResponse,
   CurrentWeightsView,
+  DeletionPreview,
+  DeletionRequestStatus,
+  DeletionRequestView,
+  DeletionTargetType,
   FixtureInspectorView,
+  FixtureListItem,
   LoginStep1Response,
   MatchingConfigVersionView,
   OverviewResponse,
@@ -76,6 +86,7 @@ export const adminTeamRepository = {
   merge: (primaryTeamId: string, duplicateTeamId: string) =>
     apiClient.post<void>('/api/v1/admin/teams/merge', { primaryTeamId, duplicateTeamId }),
   verify: (teamId: string) => apiClient.post<AdminTeamView>(`/api/v1/admin/teams/${teamId}/verify`),
+  detail: (teamId: string) => apiClient.get<AdminTeamDetail>(`/api/v1/admin/teams/${teamId}/detail`),
 };
 
 export const adminUserRepository = {
@@ -88,7 +99,33 @@ export const adminUserRepository = {
   forcePasswordReset: (userId: string) => apiClient.post<void>(`/api/v1/admin/users/${userId}/force-password-reset`),
   resendVerification: (userId: string) => apiClient.post<void>(`/api/v1/admin/users/${userId}/resend-verification`),
   verifyEmail: (userId: string) => apiClient.post<AdminUserView>(`/api/v1/admin/users/${userId}/verify-email`),
-  delete: (userId: string) => apiClient.delete<void>(`/api/v1/admin/users/${userId}`),
+  detail: (userId: string) => apiClient.get<AdminUserDetail>(`/api/v1/admin/users/${userId}/detail`),
+};
+
+export const adminAccountRepository = {
+  me: () => apiClient.get<AdminMe>('/api/v1/admin/admins/me'),
+  list: () => apiClient.get<AdminAccountView[]>('/api/v1/admin/admins'),
+  create: (email: string, password: string) =>
+    apiClient.post<CreateAdminResponse>('/api/v1/admin/admins', { email, password }),
+  remove: (adminId: string) => apiClient.delete<void>(`/api/v1/admin/admins/${adminId}`),
+};
+
+/**
+ * Permanent deletes. Any admin can preview and request one; only the super
+ * admin can approve (re-entering their password) or reject it.
+ */
+export const deletionRepository = {
+  preview: (targetType: DeletionTargetType, targetId: string) =>
+    apiClient.get<DeletionPreview>('/api/v1/admin/deletions/preview', { targetType, targetId }),
+  list: (status?: DeletionRequestStatus) =>
+    apiClient.get<DeletionRequestView[]>('/api/v1/admin/deletions', { status }),
+  request: (targetType: DeletionTargetType, targetId: string, reason: string) =>
+    apiClient.post<DeletionRequestView>('/api/v1/admin/deletions', { targetType, targetId, reason }),
+  approve: (requestId: string, password: string, code?: string, note?: string) =>
+    apiClient.post<DeletionRequestView>(`/api/v1/admin/deletions/${requestId}/approve`, { password, code, note }),
+  reject: (requestId: string, note?: string) =>
+    apiClient.post<DeletionRequestView>(`/api/v1/admin/deletions/${requestId}/reject`, { note }),
+  cancel: (requestId: string) => apiClient.post<DeletionRequestView>(`/api/v1/admin/deletions/${requestId}/cancel`),
 };
 
 export const matchingConfigRepository = {
@@ -112,7 +149,22 @@ export const auditLogRepository = {
     apiClient.get<AuditLogEntry[]>('/api/v1/admin/audit-log', { targetType, targetId, limit }),
 };
 
+export interface FixtureSearch {
+  teamQuery?: string;
+  /** ISO dates, inclusive. */
+  from?: string;
+  to?: string;
+  status?: string;
+}
+
 export const fixtureInspectorRepository = {
+  list: (search: FixtureSearch = {}) =>
+    apiClient.get<FixtureListItem[]>('/api/v1/admin/fixtures', {
+      teamQuery: search.teamQuery || undefined,
+      from: search.from || undefined,
+      to: search.to || undefined,
+      status: search.status || undefined,
+    }),
   get: (id: string) => apiClient.get<FixtureInspectorView>(`/api/v1/admin/fixtures/${id}`),
 };
 

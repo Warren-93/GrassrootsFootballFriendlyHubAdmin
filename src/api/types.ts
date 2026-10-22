@@ -94,6 +94,12 @@ export interface AdminTeamView {
   organisation?: Organisation | null;
   verification: string;
   suspended: boolean;
+  /** The fields below are absent from older APIs. */
+  archived?: boolean;
+  league?: string | null;
+  postcode?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface MembershipView {
@@ -109,6 +115,10 @@ export interface AdminUserView {
   emailVerified: boolean;
   suspended: boolean;
   memberships: MembershipView[];
+  /** Absent from older APIs. */
+  createdAt?: string | null;
+  /** Last sign-in or app/session refresh; null if never. Absent from older APIs. */
+  lastActiveAt?: string | null;
 }
 
 export interface WeightsInput {
@@ -241,4 +251,146 @@ export interface FixtureView {
 export interface FixtureInspectorView {
   fixture: FixtureView;
   auditTrail: AuditLogEntry[];
+}
+
+export type AdminRole = 'SUPER_ADMIN' | 'ADMIN';
+
+/** The signed-in admin. `totpRequired` says whether re-confirming needs an authenticator code too. */
+export interface AdminMe {
+  id: string;
+  email: string;
+  role: AdminRole;
+  totpRequired: boolean;
+}
+
+export interface AdminAccountView {
+  id: string;
+  email: string;
+  role: AdminRole;
+  createdAt: string | null;
+  lastLoginAt: string | null;
+}
+
+/** The TOTP fields are null when authenticator codes are turned off. */
+export interface CreateAdminResponse {
+  admin: AdminAccountView;
+  totpSecret: string | null;
+  provisioningUri: string | null;
+}
+
+export type DeletionTargetType = 'USER' | 'TEAM';
+export type DeletionRequestStatus = 'PENDING' | 'COMPLETED' | 'REJECTED' | 'CANCELLED';
+
+export interface NamedItem {
+  id: string;
+  name: string;
+}
+
+export interface CountLine {
+  label: string;
+  count: number;
+}
+
+/** What a permanent delete would remove, worked out from the data as it is now. */
+export interface DeletionPreview {
+  targetType: DeletionTargetType;
+  targetId: string;
+  targetLabel: string;
+  teamsDeleted: NamedItem[];
+  clubsDeleted: NamedItem[];
+  /** Teams outside the delete whose open request or confirmed fixture gets cancelled (they're notified). */
+  otherTeamsAffected: string[];
+  records: CountLine[];
+  warnings: string[];
+}
+
+export interface DeletionRequestView {
+  id: string;
+  targetType: DeletionTargetType;
+  targetId: string;
+  targetLabel: string;
+  reason: string;
+  status: DeletionRequestStatus;
+  requestedByAdminId: string;
+  requestedByEmail: string;
+  requestedAt: string;
+  decidedByAdminId: string | null;
+  decidedByEmail: string | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  /** What the preview said would go, when it was asked for. */
+  summary: string | null;
+  /** What was actually removed, once approved. */
+  result: string | null;
+}
+
+export interface ActivityEvent {
+  at: string;
+  kind: string;
+  text: string;
+}
+
+export interface MemberView {
+  membershipId: string;
+  userId: string;
+  displayName: string | null;
+  email: string | null;
+  role: string;
+  teamId: string | null;
+  teamName: string | null;
+  clubId: string | null;
+  clubName: string | null;
+  joinedAt: string | null;
+}
+
+export interface AdminUserDetail {
+  user: AdminUserView;
+  memberships: MemberView[];
+  activeSessions: number;
+  pushDevices: number;
+  notifications: number;
+  chatMessagesSent: number;
+  timeline: ActivityEvent[];
+}
+
+export interface ClubSummary {
+  id: string;
+  name: string;
+  contactEmail: string | null;
+  website: string | null;
+  postcode: string | null;
+  createdAt: string | null;
+  teamNames: string[];
+  venues: number;
+}
+
+export interface AdminTeamDetail {
+  team: AdminTeamView;
+  managerName: string | null;
+  contactPhone: string | null;
+  description: string | null;
+  travelRadiusMiles: number;
+  homeAwayPreference: string | null;
+  searchVisible: boolean;
+  shareContactDetails: boolean;
+  firstFixtureConfirmedAt: string | null;
+  club: ClubSummary | null;
+  members: MemberView[];
+  counts: Record<string, number>;
+  timeline: ActivityEvent[];
+}
+
+/** One row of the fixture list; open it with fixtureInspectorRepository.get. */
+export interface FixtureListItem {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  homeTeamId: string;
+  homeTeamName: string;
+  awayTeamId: string;
+  awayTeamName: string;
+  venueName: string | null;
+  createdAt: string | null;
 }
