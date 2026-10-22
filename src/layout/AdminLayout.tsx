@@ -12,6 +12,7 @@ import ChatFilterIcon from '@mui/icons-material/SpeakerNotesOff';
 import LogoutIcon from '@mui/icons-material/Logout';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../auth/AdminAuthContext';
 import { AdminMeContext } from '../auth/AdminMeContext';
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { path: '/reports', label: 'Reports queue', icon: <FlagIcon fontSize="small" /> },
   { path: '/teams', label: 'Clubs and teams', icon: <GroupsIcon fontSize="small" /> },
   { path: '/users', label: 'Users', icon: <PeopleIcon fontSize="small" /> },
+  { path: '/associations', label: 'Associations', icon: <AccountBalanceIcon fontSize="small" /> },
   { path: '/fixtures', label: 'Fixture inspector', icon: <SearchIcon fontSize="small" /> },
   { path: '/matching-config', label: 'Matching configuration', icon: <TuneIcon fontSize="small" /> },
   { path: '/chat-filter', label: 'Chat filter', icon: <ChatFilterIcon fontSize="small" /> },
