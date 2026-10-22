@@ -16,7 +16,7 @@ function ReportsStub() {
 
 describe('AdminAuthProvider', () => {
   beforeEach(() => {
-    sessionStorage.clear();
+    localStorage.clear();
     vi.stubGlobal('fetch', vi.fn());
   });
 
