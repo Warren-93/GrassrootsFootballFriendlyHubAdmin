@@ -1,6 +1,7 @@
 import type { ApiResult } from './result';
 import { fail, ok } from './result';
 import { SESSION_EXPIRED_EVENT, tokenStore } from '../auth/tokenStore';
+import { refreshSessionIfDue } from '../auth/sessionRefresh';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8090';
 
@@ -38,10 +39,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<A
 
   const headers: Record<string, string> = {};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (auth) {
-    const accessToken = tokenStore.accessToken();
-    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-  }
+  const accessToken = auth ? tokenStore.accessToken() : null;
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
   try {
     const response = await fetch(buildUrl(path, query), {
@@ -51,11 +50,16 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<A
     });
 
     if (response.status === 401 && auth) {
-      // Session expired (30-minute ADM-01 timeout) - clear it and tell
-      // AdminAuthProvider, which sends the admin back to sign-in, rather
-      // than trying to silently refresh.
-      tokenStore.clear();
-      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+      // Session expired (30 minutes idle, or the 12-hour maximum) - clear it
+      // and tell AdminAuthProvider, which sends the admin back to sign-in.
+      // Unless the token was renewed while this call was in flight: then
+      // the newer one is still good.
+      if (tokenStore.accessToken() === accessToken) {
+        tokenStore.clear();
+        window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+      }
+    } else if (auth && response.ok) {
+      void refreshSessionIfDue();
     }
 
     if (!response.ok) {

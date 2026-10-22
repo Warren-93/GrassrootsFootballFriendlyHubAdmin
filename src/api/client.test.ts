@@ -13,7 +13,7 @@ function jsonResponse(status: number, body: unknown): Response {
 
 describe('apiClient', () => {
   beforeEach(() => {
-    sessionStorage.clear();
+    localStorage.clear();
     vi.stubGlobal('fetch', vi.fn());
   });
 
