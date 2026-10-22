@@ -197,6 +197,14 @@ export function ReportsQueuePage() {
                       messages.map((m) => (
                         <Typography key={m.id} variant="caption" sx={{ display: 'block' }}>
                           {new Date(m.createdAt).toLocaleString()} · {senderLabel(selected, m.senderTeamId)}: {m.body}
+                          {m.gif && (
+                            <>
+                              {m.body ? ' ' : ''}
+                              <a href={m.gif.url} target="_blank" rel="noreferrer">
+                                [GIF{m.gif.title ? `: ${m.gif.title}` : ''}]
+                              </a>
+                            </>
+                          )}
                         </Typography>
                       ))
                     ))}

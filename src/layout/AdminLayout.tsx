@@ -7,6 +7,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import HistoryIcon from '@mui/icons-material/History';
+import ChatFilterIcon from '@mui/icons-material/SpeakerNotesOff';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../auth/AdminAuthContext';
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { path: '/users', label: 'Users', icon: <PeopleIcon fontSize="small" /> },
   { path: '/fixtures', label: 'Fixture inspector', icon: <SearchIcon fontSize="small" /> },
   { path: '/matching-config', label: 'Matching configuration', icon: <TuneIcon fontSize="small" /> },
+  { path: '/chat-filter', label: 'Chat filter', icon: <ChatFilterIcon fontSize="small" /> },
   { path: '/audit-log', label: 'Audit log', icon: <HistoryIcon fontSize="small" /> },
 ];
 

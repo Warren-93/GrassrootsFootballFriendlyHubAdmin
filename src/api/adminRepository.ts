@@ -5,6 +5,7 @@ import type {
   AdminUserView,
   AuditLogEntry,
   BootstrapResponse,
+  ChatFilterView,
   ConversationMessageView,
   CurrentWeightsView,
   FixtureInspectorView,
@@ -97,6 +98,13 @@ export const matchingConfigRepository = {
     apiClient.post<SearchResponse>('/api/v1/admin/matching-config/preview', { teamId, weights }),
   publish: (weights: WeightsInput, versionNote: string) =>
     apiClient.post<MatchingConfigVersionView>('/api/v1/admin/matching-config/publish', { weights, versionNote }),
+};
+
+export const chatFilterRepository = {
+  current: () => apiClient.get<ChatFilterView>('/api/v1/admin/chat-filter'),
+  save: (words: string[]) => apiClient.put<ChatFilterView>('/api/v1/admin/chat-filter', { words }),
+  reset: () => apiClient.post<ChatFilterView>('/api/v1/admin/chat-filter/reset'),
+  preview: (text: string) => apiClient.post<{ text: string; masked: boolean }>('/api/v1/admin/chat-filter/preview', { text }),
 };
 
 export const auditLogRepository = {
