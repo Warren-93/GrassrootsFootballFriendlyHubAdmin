@@ -394,3 +394,37 @@ export interface FixtureListItem {
   venueName: string | null;
   createdAt: string | null;
 }
+
+/** A registered (verified) association, with the leagues it runs. Kept by admins; not yet used on create team. */
+export interface LeagueView {
+  id: string;
+  name: string;
+  divisions: string[];
+}
+
+export interface AssociationView {
+  id: string;
+  name: string;
+  shortName: string | null;
+  /** Which fixed Organisation option it corresponds to, if any. */
+  linkedOrganisation: Organisation | null;
+  linkedOrganisationLabel: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  website: string | null;
+  notes: string | null;
+  leagues: LeagueView[];
+  createdAt: string | null;
+  createdByEmail: string | null;
+  updatedAt: string | null;
+}
+
+export interface AssociationInput {
+  name: string;
+  shortName?: string | null;
+  linkedOrganisation?: Organisation | null;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  website?: string | null;
+  notes?: string | null;
+}

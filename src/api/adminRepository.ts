@@ -7,6 +7,8 @@ import type {
   AdminTeamView,
   AdminUserDetail,
   AdminUserView,
+  AssociationInput,
+  AssociationView,
   AuditLogEntry,
   BootstrapResponse,
   ChatFilterView,
@@ -172,4 +174,18 @@ export const adminConversationRepository = {
   /** The transcript between two teams, if any conversation exists - empty array otherwise. Every call is audit-logged server-side. */
   between: (teamAId: string, teamBId: string) =>
     apiClient.get<ConversationMessageView[]>('/api/v1/admin/conversations/between', { teamAId, teamBId }),
+};
+
+/** Registered associations, their leagues and divisions. Any admin can change them; every change is audit-logged. */
+export const associationRepository = {
+  list: () => apiClient.get<AssociationView[]>('/api/v1/admin/associations'),
+  create: (input: AssociationInput) => apiClient.post<AssociationView>('/api/v1/admin/associations', input),
+  update: (id: string, input: AssociationInput) => apiClient.put<AssociationView>(`/api/v1/admin/associations/${id}`, input),
+  remove: (id: string) => apiClient.delete<void>(`/api/v1/admin/associations/${id}`),
+  addLeague: (id: string, name: string, divisions: string[]) =>
+    apiClient.post<AssociationView>(`/api/v1/admin/associations/${id}/leagues`, { name, divisions }),
+  updateLeague: (id: string, leagueId: string, name: string, divisions: string[]) =>
+    apiClient.put<AssociationView>(`/api/v1/admin/associations/${id}/leagues/${leagueId}`, { name, divisions }),
+  removeLeague: (id: string, leagueId: string) =>
+    apiClient.delete<AssociationView>(`/api/v1/admin/associations/${id}/leagues/${leagueId}`),
 };

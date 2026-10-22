@@ -15,6 +15,7 @@ import { TeamDetailPage } from './pages/TeamDetailPage';
 import { FixtureDetailPage } from './pages/FixtureDetailPage';
 import { DeletionRequestsPage } from './pages/DeletionRequestsPage';
 import { AdminsPage } from './pages/AdminsPage';
+import { AssociationsPage } from './pages/AssociationsPage';
 import { AdminLayout } from './layout/AdminLayout';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 
@@ -37,6 +38,7 @@ function App() {
           <Route path="/fixtures/:fixtureId" element={<FixtureDetailPage />} />
           <Route path="/deletions" element={<DeletionRequestsPage />} />
           <Route path="/admins" element={<AdminsPage />} />
+          <Route path="/associations" element={<AssociationsPage />} />
           <Route path="/matching-config" element={<MatchingConfigPage />} />
           <Route path="/chat-filter" element={<ChatFilterPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
