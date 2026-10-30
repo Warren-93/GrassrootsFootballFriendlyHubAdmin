@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import { verificationRepository } from '../api/adminRepository';
+import { safeLink } from '../api/format';
 import type { VerificationRequestView } from '../api/types';
 import { IdCaption, TeamNameLine } from '../components/TeamName';
 
@@ -124,11 +125,26 @@ export function VerificationQueuePage() {
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     Evidence
                   </Typography>
-                  {selected.evidenceUrls.map((url) => (
-                    <Typography key={url} variant="body2" component="a" href={url} target="_blank" sx={{ display: 'block' }}>
-                      {url}
-                    </Typography>
-                  ))}
+                  {selected.evidenceUrls.map((entry) => {
+                    const href = safeLink(entry);
+                    return href ? (
+                      <Typography
+                        key={entry}
+                        variant="body2"
+                        component="a"
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ display: 'block' }}
+                      >
+                        {entry}
+                      </Typography>
+                    ) : (
+                      <Typography key={entry} variant="body2" sx={{ display: 'block', wordBreak: 'break-word' }}>
+                        {entry}
+                      </Typography>
+                    );
+                  })}
                 </Box>
                 {awaitingSecondRejection && (
                   <Alert severity="warning">

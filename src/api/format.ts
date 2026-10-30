@@ -25,3 +25,18 @@ export function roleLabel(role: string): string {
   const words = role.toLowerCase().replace(/_/g, ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
+
+/**
+ * The entry as a link the admin can safely open: only http(s) addresses.
+ * Evidence is whatever a team typed, so anything else (a note, or a
+ * "javascript:" link that would run in this signed-in session) is shown as
+ * text instead. Null when it isn't a web address.
+ */
+export function safeLink(value: string): string | null {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
